@@ -1,9 +1,8 @@
 package atoms.model;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Queue;
+import java.util.Collections;
 
 // Mathematical proofs:
 // 1. If there is endless loop of explosions, the player who caused it will take over all enemy electrons
@@ -25,10 +24,10 @@ import java.util.Queue;
 
 public final class GameModel {
     public static final int PLAYERS_COUNT = 2;
+    private static final int MINIMAX_DEPTH = 2;
 
     public GameModel(int boardSize) {
-        boardState = new BoardState(boardSize, PLAYERS_COUNT);
-        this.playersCount = playersCount;
+        currentBoardState = new BoardState(boardSize, PLAYERS_COUNT);
         currentPlayerId = 0;
     }
 
@@ -36,25 +35,26 @@ public final class GameModel {
         return currentPlayerId;
     }
 
-    public DetailedMove performMove(int playerId, SquarePosition position) throws Exception {
-        DetailedMove move = MoveGenerator.createDetailedMove(boardState, playerId, position);
-        boardState = MoveGenerator.createBoardState(boardState, playerId, position);
+    public DetailedMove performMove(SquarePosition position) {
+        DetailedMove move = MoveGenerator.createDetailedMove(currentBoardState, currentPlayerId, position);
+        currentBoardState = MoveGenerator.createBoardState(currentBoardState, currentPlayerId, position);
+        switchToNextPlayer();
         return move;
     }
 
-    public DetailedMove performAIMove(int playerId) {
-        // TODO: compute Position, return detailed move
-
-        return null;
+    public DetailedMove performAIMove() {
+        BoardState state = chooseNextBoardStateForAI();
+        DetailedMove move = MoveGenerator.createDetailedMove(currentBoardState, currentPlayerId, state.getTarget());
+        currentBoardState = state;
+        switchToNextPlayer();
+        return move;
     }
 
-    public void getState() {
-        // TODO: return game state - Running, Over, Winner
-        // OR pass onGameOver action to constructor
+    public void getStatistics() {
+        // TODO: return player statistics - how many electrons they have, who is winner
     }
 
-    private final int playersCount;
-    private BoardState boardState;
+    private BoardState currentBoardState;
     private int currentPlayerId;
 
     private void switchToNextPlayer() {
@@ -62,20 +62,41 @@ public final class GameModel {
     }
 
     private int getNextPlayerId(int playerId) {
-        return (playerId + 1) % playersCount;
+        return (playerId + 1) % PLAYERS_COUNT;
     }
 
-    private int minimax(BoardState state, int depth, int alpha, int beta, int playerId, boolean maximizing) {
-        int sign = maximizing ? 1 : -1;
-        if (depth == 0 || boardStateIsTerminal(state)) {
-            return sign * evaluateBoardState(state);
+    private boolean isMaximizingPlayer(int playerId) {
+        return playerId % 2 == 0;
+    }
+
+    private BoardState chooseNextBoardStateForAI() {
+        List<BoardState> states = MoveGenerator.generateBoardStates(currentBoardState, currentPlayerId);
+        List<Integer> evaluations = new ArrayList<>();
+        int nextPlayerId = getNextPlayerId(currentPlayerId);
+        for (BoardState state : states) {
+            int value = minimax(state, MINIMAX_DEPTH, Integer.MIN_VALUE, Integer.MAX_VALUE, nextPlayerId);
+            evaluations.add(value);
+        }
+        int searchedValue;
+        if (isMaximizingPlayer(currentPlayerId)) {
+            searchedValue = Collections.max(evaluations);
+        } else {
+            searchedValue = Collections.min(evaluations);
+        }
+        int searchedIndex = evaluations.indexOf(searchedValue);
+        return states.get(searchedIndex);
+    }
+
+    private int minimax(BoardState state, int depth, int alpha, int beta, int playerId) {
+        if (depth == 0 || state.isTerminal()) {
+            return evaluateBoardState(state);
         }
         List<BoardState> states = MoveGenerator.generateBoardStates(state, playerId);
         int nextPlayerId = getNextPlayerId(playerId);
-        if (maximizing) {
+        if (isMaximizingPlayer(playerId)) {
             int maxValue = Integer.MIN_VALUE;
             for (BoardState nextState : states) {
-                int value = minimax(nextState, depth - 1, alpha, beta, nextPlayerId, false);
+                int value = minimax(nextState, depth - 1, alpha, beta, nextPlayerId);
                 maxValue = Math.max(maxValue, value);
                 if (maxValue >= beta) {
                     break;
@@ -86,7 +107,7 @@ public final class GameModel {
         } else {
             int minValue = Integer.MAX_VALUE;
             for (BoardState nextState : states) {
-                int value = minimax(nextState, depth - 1, alpha, beta, nextPlayerId, true);
+                int value = minimax(nextState, depth - 1, alpha, beta, nextPlayerId);
                 minValue = Math.min(minValue, value);
                 if (minValue <= alpha) {
                     break;
@@ -97,46 +118,21 @@ public final class GameModel {
         }
     }
 
-    private static boolean boardStateIsTerminal(BoardState state) {
-        return false;
-    }
-
     private static int evaluateBoardState(BoardState state) {
-        return 0;
+        int electronsCount1 = state.getElectronsCount(0);
+        int electronsCount2 = state.getElectronsCount(1);
+        if (electronsCount1 == 0) {
+            // First player loses
+            return Integer.MIN_VALUE;
+        } else if (electronsCount2 == 0) {
+            // Second player loses
+            return Integer.MAX_VALUE;
+        }
+        return electronsCount1 - electronsCount2;
     }
 
     // Moves ordering during minimax:
     // - go through all board changes, count differences (how many electrons were added + how many electrons of enemy player
     //   were removed - actually not, because electrons from enemy player are added to player)
     // When you reach the last depth, go through the whole board and count how many electrons belongs to whom
-
-    // Can I really determine explosions from board changes alone? No, I cannot - there can be multiple explosions in 1 phase
-    // I need to store additional information - positions of explosions?
-
-    // Move must be easy to generate, but also convertible to DetailedMove
-    // Make algorithms to generate Move and convert it to DetailedMove, and we will see
-    // In Move I do not need to have explosion origins and targets, I just need to have changes
-
-    // Move: SquarePosition origin, List<MovePhase> phases
-    // MovePhase: List<Explosion>
-    // Explosion: SquarePosition origin, List<SquarePosition> targets
-    // StolenSquares: List<(int playerId, List<SquarePosition>)> - add stolen targets to the list
-
-    // We have to track number of enemy atoms to stop the game when endless loop happens
-
-    // How to reverse Move:
-    // Iterate through phases in reverse
-    // Add 3 cells to explosion origin, remove 1 cell from targets
-    // Remove 1 cell from move origin
-    // Iterate through stolen squares, restore their original owner
-
-    // Explosion Position -> remove all electrons from explosion position
-    // Explosion TargetPositions (can be determined from explosion position) -> increase their electrons by one
-    // If I just save new squares, then I will not be able to increase electrons more than by one in one wave
-    // How to reverse move?
-    // I cannot determine if square gained after explosion was owned by another player
-
-    // We have to track number of
-
-    // Minimax function will return pair (int evaluation, Move move) -> move that was evaluated this way
 }

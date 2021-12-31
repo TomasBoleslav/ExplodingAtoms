@@ -13,26 +13,68 @@ package atoms.model;
 // - explosion targets are yellow
 // - squares can have up to 7 circles
 
-public record BoardState(
-        Board board,
-        SquarePosition origin,
-        int[] playerElectronCounts,
-        boolean[] playerMoved) {
+public class BoardState {
+    public BoardState(Board board, SquarePosition origin, int[] electronCounts) {
+        this.board = board;
+        this.origin = origin;
+        this.electronCounts = electronCounts;
+    }
+
     public BoardState(int boardSize, int playersCount) {
-        this(
-                new Board(boardSize),
-                null,
-                new int[playersCount],
-                new boolean[playersCount]
-        );
+        board = new Board(boardSize);
+        origin = null;
+        electronCounts = new int[playersCount];
+    }
+
+    public boolean allPlayersMoved() {
+        int totalElectronsCount = 0;
+        for (int playerElectrons : electronCounts) {
+            totalElectronsCount += playerElectrons;
+        }
+        return totalElectronsCount >= electronCounts.length;
+    }
+
+    public boolean isTerminal() {
+        int totalElectronsCount = 0;
+        int playersAlive = 0;
+        for (int playerElectrons : electronCounts) {
+            if (playerElectrons > 0) {
+                if (playersAlive > 0) {
+                    return false;
+                }
+                playersAlive++;
+                totalElectronsCount += playerElectrons;
+            }
+        }
+        return totalElectronsCount >= electronCounts.length;
     }
 
     public BoardState copy() {
         return new BoardState(
                 board.copy(),
                 origin,
-                playerElectronCounts.clone(),
-                playerMoved.clone()
+                electronCounts.clone()
         );
     }
+
+    public int getValue() {
+        return value;
+    }
+
+    public void setValue(int value) {
+        this.value = value;
+    }
+
+    public SquarePosition getTarget() {
+        return origin;
+    }
+
+    public int getElectronsCount(int playerId) {
+        return electronCounts[playerId];
+    }
+
+    private final Board board;
+    private final SquarePosition origin;
+    private final int[] electronCounts;
+    private int value;
 }

@@ -12,12 +12,10 @@ import java.util.Queue;
 public class MoveGenerator {
     public static List<BoardState> generateBoardStates(BoardState state, int playerId) {
         List<BoardState> states = new ArrayList<>();
-        boolean[] playerMoved = state.playerMoved().clone();
-        playerMoved[playerId] = true;
-        boolean allPlayersMoved = checkIfAllPlayersMoved(playerMoved);
-        List<SquarePosition> origins = generateAllMoveTargets(state.board(), playerId);
-        for (SquarePosition origin : origins) {
-            BoardState newState = createNextBoardState(state, origin, playerId, playerMoved, allPlayersMoved);
+        boolean allPlayersMoved = state.allPlayersMoved();
+        List<SquarePosition> targets = generateAllMoveTargets(state.board(), playerId);
+        for (SquarePosition target : targets) {
+            BoardState newState = createNextBoardState(state, target, playerId, allPlayersMoved);
             states.add(newState);
         }
         return states;
@@ -28,18 +26,10 @@ public class MoveGenerator {
         if (!playerCanTargetSquare(playerId, targetSquare)) {
             return null;
         }
-        boolean[] playerMoved = state.playerMoved().clone();
-        playerMoved[playerId] = true;
-        boolean allPlayersMoved = checkIfAllPlayersMoved(playerMoved);
-        return createNextBoardState(state, target, playerId, playerMoved, allPlayersMoved);
+        boolean allPlayersMoved = state.allPlayersMoved();
+        return createNextBoardState(state, target, playerId, allPlayersMoved);
     }
 
-
-    // Make it simpler:
-    // 0. copy board
-    // 1. add first electron
-    // 2. go through whole board, get list of squares with atoms to explode
-    // 3. explode atoms - add electron to targets, assign new owner, possibly change electron counts
     public static DetailedMove createDetailedMove(BoardState state, int playerId, SquarePosition target) {
         Square targetSquare = state.board().getSquare(target);
         if (!playerCanTargetSquare(playerId, targetSquare)) {
@@ -48,9 +38,7 @@ public class MoveGenerator {
         List<DetailedMovePhase> phases = new ArrayList<>();
         int[] playerElectronCounts = state.playerElectronCounts().clone();
         playerElectronCounts[playerId]++;
-        boolean[] playerMoved = state.playerMoved().clone();
-        playerMoved[playerId] = true;
-        boolean allPlayersMoved = checkIfAllPlayersMoved(playerMoved);
+        boolean allPlayersMoved = state.allPlayersMoved();
         Board board = state.board().copy();
         board.setSquare(target, new Square(playerId, targetSquare.electronsCount() + 1));
         phases.add(performFirstPhase(board, playerId, target));
@@ -116,7 +104,8 @@ public class MoveGenerator {
         return new DetailedMovePhase(explosions, targets, board.copy());
     }
 
-    private record IndexedSquarePosition (int index, SquarePosition position) {}
+    private record IndexedSquarePosition(int index, SquarePosition position) {
+    }
 
     private static boolean playerCanTargetSquare(int playerId, Square targetSquare) {
         int squarePlayerId = targetSquare.playerId();
@@ -150,7 +139,6 @@ public class MoveGenerator {
             BoardState initialState,
             SquarePosition target,
             int playerId,
-            boolean[] playerMoved,
             boolean allPlayersMoved) {
         int[] playerElectronCounts = initialState.playerElectronCounts().clone();
         playerElectronCounts[playerId]++;
@@ -181,9 +169,8 @@ public class MoveGenerator {
             }
             board.setSquare(currentTarget, new Square(newPlayerId, newElectronsCount));
         }
-        return new BoardState(board, target, playerElectronCounts, playerMoved);
+        return new BoardState(board, target, playerElectronCounts);
     }
-
 
     private static boolean playerStoleAllElectrons(int playerId, int[] playerElectronCounts, boolean allPlayersMoved) {
         if (!allPlayersMoved) {
