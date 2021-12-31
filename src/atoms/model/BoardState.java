@@ -73,6 +73,14 @@ public class BoardState {
         return electronCounts[playerId];
     }
 
+    public int[] getAllElectronCounts() {
+        return electronCounts;
+    }
+
+    public Board getBoard() {
+        return board;
+    }
+
     private final Board board;
     private final SquarePosition origin;
     private final int[] electronCounts;

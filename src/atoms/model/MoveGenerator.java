@@ -13,7 +13,7 @@ public class MoveGenerator {
     public static List<BoardState> generateBoardStates(BoardState state, int playerId) {
         List<BoardState> states = new ArrayList<>();
         boolean allPlayersMoved = state.allPlayersMoved();
-        List<SquarePosition> targets = generateAllMoveTargets(state.board(), playerId);
+        List<SquarePosition> targets = generateAllMoveTargets(state.getBoard(), playerId);
         for (SquarePosition target : targets) {
             BoardState newState = createNextBoardState(state, target, playerId, allPlayersMoved);
             states.add(newState);
@@ -22,7 +22,7 @@ public class MoveGenerator {
     }
 
     public static BoardState createBoardState(BoardState state, int playerId, SquarePosition target) {
-        Square targetSquare = state.board().getSquare(target);
+        Square targetSquare = state.getBoard().getSquare(target);
         if (!playerCanTargetSquare(playerId, targetSquare)) {
             return null;
         }
@@ -31,15 +31,15 @@ public class MoveGenerator {
     }
 
     public static DetailedMove createDetailedMove(BoardState state, int playerId, SquarePosition target) {
-        Square targetSquare = state.board().getSquare(target);
+        Square targetSquare = state.getBoard().getSquare(target);
         if (!playerCanTargetSquare(playerId, targetSquare)) {
             return null;
         }
         List<DetailedMovePhase> phases = new ArrayList<>();
-        int[] playerElectronCounts = state.playerElectronCounts().clone();
+        int[] playerElectronCounts = state.getAllElectronCounts().clone();
         playerElectronCounts[playerId]++;
         boolean allPlayersMoved = state.allPlayersMoved();
-        Board board = state.board().copy();
+        Board board = state.getBoard().copy();
         board.setSquare(target, new Square(playerId, targetSquare.electronsCount() + 1));
         phases.add(performFirstPhase(board, playerId, target));
         List<SquarePosition> explosions = findExplosions(board);
@@ -126,23 +126,14 @@ public class MoveGenerator {
         return origins;
     }
 
-    private static boolean checkIfAllPlayersMoved(boolean[] playerMoved) {
-        for (boolean moved : playerMoved) {
-            if (!moved) {
-                return false;
-            }
-        }
-        return true;
-    }
-
     private static BoardState createNextBoardState(
-            BoardState initialState,
+            BoardState state,
             SquarePosition target,
             int playerId,
             boolean allPlayersMoved) {
-        int[] playerElectronCounts = initialState.playerElectronCounts().clone();
+        int[] playerElectronCounts = state.getAllElectronCounts().clone();
         playerElectronCounts[playerId]++;
-        Board board = initialState.board().copy();
+        Board board = state.getBoard().copy();
         Queue<SquarePosition> targets = new LinkedList<>();
         targets.add(target);
         while (!targets.isEmpty() && !playerStoleAllElectrons(playerId, playerElectronCounts, allPlayersMoved)) {
