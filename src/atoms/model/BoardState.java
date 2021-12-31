@@ -1,7 +1,5 @@
 package atoms.model;
 
-import java.util.List;
-
 // forbid move that starts 2 or more squares away from allied or enemy squares
 // - it may cause speed up in the beginning
 
@@ -15,9 +13,26 @@ import java.util.List;
 // - explosion targets are yellow
 // - squares can have up to 7 circles
 
-public class BoardState {
-    private final SquarePosition origin;
-    private final Board board;
-    private final int[] playerSquareCounts;
-    private final int[] playerElectronCounts;
+public record BoardState(
+        Board board,
+        SquarePosition origin,
+        int[] playerElectronCounts,
+        boolean[] playerMoved) {
+    public BoardState(int boardSize, int playersCount) {
+        this(
+                new Board(boardSize),
+                null,
+                new int[playersCount],
+                new boolean[playersCount]
+        );
+    }
+
+    public BoardState copy() {
+        return new BoardState(
+                board.copy(),
+                origin,
+                playerElectronCounts.clone(),
+                playerMoved.clone()
+        );
+    }
 }

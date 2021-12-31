@@ -6,11 +6,13 @@ import java.util.List;
 import java.util.Queue;
 
 // Mathematical proofs:
-// 1. If there is endless loop of explosions, the whole board must belong to the player who caused it.
+// 1. If there is endless loop of explosions, the player who caused it will take over all enemy electrons
 // Proof:
-//   If there is endless loop of explosions, there must be a square A that is repeated (number of squares is finite).
-//   The neighbors of A will thus have an endless supply of electrons -> they too belong to the cycle.
-//   By induction all squares belong to the endless cycle
+//   By contradiction. Let's assume player causes an endless loop and an enemy square will be left untouched.
+//   Let's take the boundary inside which the explosion of the loop happen and outside not. The number of squares
+//   neighboring the boundary is finite. Every time explosion happens inside the boundary, an electron will be sent
+//   outside. Thus squares neighboring the boundary have an endless supply of electrons, so they must explode too at
+//   one point. Hence, we have the contradiction with the fact that atoms outside the boundary do not explode.
 // Consequence: We can stop the game when all squares belong to 1 player
 //
 // 2. Two neighboring atoms cannot explode at the same time
@@ -22,41 +24,27 @@ import java.util.Queue;
 //   2 neighbors cannot explode in the same wave, because they have different square colors.
 
 public final class GameModel {
+    public static final int PLAYERS_COUNT = 2;
 
-    public GameModel(int boardSize, int playersCount) {
-        board = new Board(boardSize);
+    public GameModel(int boardSize) {
+        boardState = new BoardState(boardSize, PLAYERS_COUNT);
+        this.playersCount = playersCount;
+        currentPlayerId = 0;
     }
 
-    private int currentPlayerId;
-
-    // TODO: remember ID of current player,
     public int getCurrentPlayerId() {
         return currentPlayerId;
     }
 
     public DetailedMove performMove(int playerId, SquarePosition position) throws Exception {
-        Square square = board.getSquare(position);
-        if (square.playerId() != board.NO_PLAYER_ID && square.playerId() != playerId) {
-            throw new Exception("Cannot add an electron to a square that belongs to another player");
-        }
-
-
-        Queue<List<SquarePosition>> explosionOrigins;
-        Square square = board.getSquare(position);
-        int newElectronsCount = square.electronsCount() + 1;
-        Square newSquare;
-        int maxElectronsCount = getMaxElectronsCount(position);
-        if (newElectronsCount < maxElectronsCount) { // No, depends on the position!
-            newSquare = new Square(playerId, newElectronsCount);
-        } else {
-            newSquare = new Square(playerId, 1);
-        }
-        Square newSquare = new Square(playerId, newElectronsCount);
-        return null;
+        DetailedMove move = MoveGenerator.createDetailedMove(boardState, playerId, position);
+        boardState = MoveGenerator.createBoardState(boardState, playerId, position);
+        return move;
     }
 
     public DetailedMove performAIMove(int playerId) {
-        // TODO: return verbose move
+        // TODO: compute Position, return detailed move
+
         return null;
     }
 
@@ -65,85 +53,56 @@ public final class GameModel {
         // OR pass onGameOver action to constructor
     }
 
-    private final Board board;
+    private final int playersCount;
+    private BoardState boardState;
+    private int currentPlayerId;
 
-    private int getMaxElectronsCount(SquarePosition position) {
-        int maxElectrons = 4;
-        int lastIndex = board.getSize() - 1;
-        if (position.row() == 0 || position.row() == lastIndex) {
-            maxElectrons--;
-        }
-        if (position.column() == 0 || position.column() == lastIndex) {
-            maxElectrons--;
-        }
+    private void switchToNextPlayer() {
+        currentPlayerId = getNextPlayerId(currentPlayerId);
     }
 
-    private List<SquarePosition> getExplosionTargets(SquarePosition position) {
-        List<SquarePosition> explosionTargets = new ArrayList<>();
-        int prevRow = position.row() - 1;
-        int nextRow = position.row() + 1;
-        int prevColumn = position.column() - 1;
-        int nextColumn = position.column() + 1;
-        if (prevRow >= 0) {
-            explosionTargets.add(new SquarePosition(prevRow, position.column()));
-        }
-        if (nextRow < board.getSize()) {
-            explosionTargets.add(new SquarePosition(nextRow, position.column()));
-        }
-        if (prevColumn >= 0) {
-            explosionTargets.add(new SquarePosition(position.row(), prevColumn));
-        }
-        if (nextColumn < board.getSize()) {
-            explosionTargets.add(new SquarePosition(position.row(), nextColumn));
-        }
-        return explosionTargets;
+    private int getNextPlayerId(int playerId) {
+        return (playerId + 1) % playersCount;
     }
 
-    private Move2 createMove2(Board board, SquarePosition origin, int playerId) {
-
-    }
-
-    private ExplosionWave createMove(Board board, SquarePosition origin, int playerId) {
-        // We have to track number of owned squares !!! - when it reaches 64, the player wins
-
-        // Proof with endless loop does not work - it would work if 1 electron stayed after explosion
-        //
-        List<List<SquarePosition>> waves = new ArrayList<>();
-        List<SquarePosition> currentWave = new ArrayList<>();
-        currentWave.add(origin);
-        while (currentWave.size() > 0) {
-            List<SquarePosition> nextWave = new ArrayList<>();
-            ExplosionWave explosionWave = new ExplosionWave();
-            for (SquarePosition position : currentWave) {
-
+    private int minimax(BoardState state, int depth, int alpha, int beta, int playerId, boolean maximizing) {
+        int sign = maximizing ? 1 : -1;
+        if (depth == 0 || boardStateIsTerminal(state)) {
+            return sign * evaluateBoardState(state);
+        }
+        List<BoardState> states = MoveGenerator.generateBoardStates(state, playerId);
+        int nextPlayerId = getNextPlayerId(playerId);
+        if (maximizing) {
+            int maxValue = Integer.MIN_VALUE;
+            for (BoardState nextState : states) {
+                int value = minimax(nextState, depth - 1, alpha, beta, nextPlayerId, false);
+                maxValue = Math.max(maxValue, value);
+                if (maxValue >= beta) {
+                    break;
+                }
+                alpha = Math.max(alpha, maxValue);
             }
-
-            currentWave = nextWave;
-        }
-
-        Queue<SquarePosition> wavePositions = new LinkedList<>();
-        positions.add(origin);
-        while
-        while (!positions.isEmpty()) {
-            SquarePosition currentPosition = positions.remove();
-
-        }
-
-        Move move = new Move(playerId, position);
-        Square originSquare = board.getSquare(position);
-        originSquare.incElectronsCount();
-        List<SquarePosition> explosionTargets = getExplosionTargets(position);
-        int maxElectrons = explosionTargets.size() - 1;
-        if (originSquare.getElectronsCount() > maxElectrons) {
-            List<ExplosionWave> explosionWaves = new ArrayList<>();
+            return maxValue;
+        } else {
+            int minValue = Integer.MAX_VALUE;
+            for (BoardState nextState : states) {
+                int value = minimax(nextState, depth - 1, alpha, beta, nextPlayerId, true);
+                minValue = Math.min(minValue, value);
+                if (minValue <= alpha) {
+                    break;
+                }
+                beta = Math.min(beta, minValue);
+            }
+            return minValue;
         }
     }
 
-    private static DetailedMove convertMoveToDetailedMove() {
-        // can this be done? not simply
-        // but I need this when performing AI move - using SimpleMove internally, but then converting to Move for View
-        // it would be better to have phases - groups of changes that were made at the same time
-        // they can be easily added in minimax
+    private static boolean boardStateIsTerminal(BoardState state) {
+        return false;
+    }
+
+    private static int evaluateBoardState(BoardState state) {
+        return 0;
     }
 
     // Moves ordering during minimax:
