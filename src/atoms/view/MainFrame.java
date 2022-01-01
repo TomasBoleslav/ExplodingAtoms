@@ -58,20 +58,19 @@ import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 
+// TODO: card layout
 public final class MainFrame extends JFrame {
     public MainFrame() {
         setTitle("Exploding Atoms");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
-        contentPanel = new JPanel(new BorderLayout());
+        cardLayout = new CardLayout();
+        contentPanel = new JPanel(cardLayout);
         menuPanel = createMenuPanel();
         gamePanel = createGamePanel();
-        //add(menuPanel);
-        //add(gamePanel);
-        //menuPanel.setVisible(true);
-        contentPanel.add(menuPanel);
+        contentPanel.add(menuPanel, MENU_PANEL_NAME);
+        contentPanel.add(gamePanel, GAME_PANEL_NAME);
         setContentPane(contentPanel);
-        //gamePanel.setVisible(false);
         pack();
         setVisible(true);
     }
@@ -92,7 +91,7 @@ public final class MainFrame extends JFrame {
 
         JPanel buttonsPanel = new JPanel();
         JButton playButton = new JButton("Play");
-        playButton.addActionListener(e -> switchScenes(menuPanel, gamePanel));
+        playButton.addActionListener(e -> playGame());
         playButton.setFont(fontNormal);
         buttonsPanel.add(playButton);
 
@@ -176,7 +175,7 @@ public final class MainFrame extends JFrame {
 
         JPanel buttonsPanel = new JPanel();
         JButton quitButton = new JButton("Quit");
-        quitButton.addActionListener(e -> switchScenes(gamePanel, menuPanel));
+        quitButton.addActionListener(e -> quitGame());
         buttonsPanel.add(quitButton);
 
         gameControlPanel.add(statusPanel);
@@ -184,20 +183,16 @@ public final class MainFrame extends JFrame {
         return gameControlPanel;
     }
 
-    public void switchScenes(JPanel currentScene, JPanel nextScene) {
-        //nextScene.setVisible(true);
-        //setContentPane(nextScene);
-        //invalidate();
-        //currentScene.setVisible(false);
-/*
-        currentScene.setVisible(false);
-        nextScene.setVisible(true);*/
-        //repaint();
-        contentPanel.remove(currentScene);
-        contentPanel.add(nextScene);
-        contentPanel.repaint();
+    public void playGame() {
+        cardLayout.show(contentPanel, GAME_PANEL_NAME);
     }
 
+    public void quitGame() {
+        cardLayout.show(contentPanel, MENU_PANEL_NAME);
+    }
+
+    private static final String MENU_PANEL_NAME = "menuPanel";
+    private static final String GAME_PANEL_NAME = "gamePanel";
     private static final Font fontNormal = new Font("Courier New", Font.PLAIN, 14);
     private static final Font fontHeading = new Font("Courier New", Font.BOLD, 32);
     private static final Dimension preferredFrameSize = new Dimension(640, 480);
