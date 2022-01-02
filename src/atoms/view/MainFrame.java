@@ -48,17 +48,21 @@ package atoms.view;
 // DETECT DRAW - endless loop of explosions
 
 
-import atoms.model.Board;
+import atoms.model.*;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 
-// TODO: card layout
+// TODO: BUG: sometimes when placing an electron, some of existing electrons will disappear
+// - maybe inconsistency between computing DetailedMove and BoardState? - some of them may be computed wrongly
+// - we display boardAfter from DetailedMovePhase, but assign currentBoardState by computeNextBoardState
+// - computation of phases or states is wrong and that causes disappearances of some electrons
+// - it was observed only after multiple explosions (maybe computation of explosions is incorrect)
+
+
 public final class MainFrame extends JFrame {
     public MainFrame() {
         setTitle("Exploding Atoms");
@@ -133,18 +137,31 @@ public final class MainFrame extends JFrame {
         boardPanel.addMouseListener(new MouseListener() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                Timer timer = new Timer(3000, new ActionListener() {
-                    @Override
-                    public void actionPerformed(ActionEvent arg0) {
-                        boardPanel.setBoard(new Board(8));
-                        boardPanel.repaint();
+                SquarePosition target = boardPanel.getSquarePositionFromPoint(e.getX(), e.getY());
+                if (target == null) {
+                    return;
+                }
+                DetailedMove move = gameModel.performMove(target);
+                if (move == null) {
+                    return;
+                }
+                for (DetailedMovePhase phase : move.phases()) {
+                    boardPanel.setExplosions(phase.explosions());
+                    boardPanel.setTargets(phase.targets());
+                    boardPanel.paintImmediately(0, 0, boardPanel.getWidth(), boardPanel.getHeight());
+                    try {
+                        Thread.sleep(200);
+                    } catch (InterruptedException ex) {
                     }
-                });
-                timer.setRepeats(false); // Only execute once
-                timer.start(); // Go go go!
-                /*
-                boardPanel.setBoard(new Board(8));
-                boardPanel.repaint();*/
+                    boardPanel.setExplosions(null);
+                    boardPanel.setTargets(null);
+                    boardPanel.setBoard(phase.boardAfter());
+                    boardPanel.paintImmediately(0, 0, boardPanel.getWidth(), boardPanel.getHeight());
+                    try {
+                        Thread.sleep(200);
+                    } catch (InterruptedException ex) {
+                    }
+                }
             }
             @Override
             public void mousePressed(MouseEvent e) {}
@@ -155,7 +172,6 @@ public final class MainFrame extends JFrame {
             @Override
             public void mouseExited(MouseEvent e) {}
         });
-        //boardPanel.add(new Label("Board"));
         return boardPanel;
     }
 
@@ -184,6 +200,10 @@ public final class MainFrame extends JFrame {
     }
 
     public void playGame() {
+        gameModel = new GameModel();
+        Board board = gameModel.getCurrentBoardCopy();
+        boardPanel.setBoard(board);
+        //boardPanel.repaint(); // TODO: is it needed?
         cardLayout.show(contentPanel, GAME_PANEL_NAME);
     }
 
@@ -204,6 +224,7 @@ public final class MainFrame extends JFrame {
     private JLabel currentPlayerLabel;
     private JLabel winnerLabel;
     private BoardPanel boardPanel;
+    private GameModel gameModel;
 
     // TODO: if immediate repainting is a problem, how to paint steps?
 }

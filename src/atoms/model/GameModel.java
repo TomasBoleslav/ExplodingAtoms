@@ -26,6 +26,10 @@ public final class GameModel {
     public static final int PLAYERS_COUNT = 2;
     private static final int MINIMAX_DEPTH = 2;
 
+    public GameModel() {
+        this(8);
+    }
+
     public GameModel(int boardSize) {
         currentBoardState = new BoardState(boardSize, PLAYERS_COUNT);
         currentPlayerId = 0;
@@ -36,6 +40,10 @@ public final class GameModel {
     }
 
     public DetailedMove performMove(SquarePosition position) {
+        int squarePlayerId = currentBoardState.getBoard().getSquare(position).playerId();
+        if (squarePlayerId != Board.NO_PLAYER_ID && squarePlayerId != currentPlayerId) {
+            return null;
+        }
         DetailedMove move = MoveGenerator.createDetailedMove(currentBoardState, currentPlayerId, position);
         currentBoardState = MoveGenerator.createBoardState(currentBoardState, currentPlayerId, position);
         switchToNextPlayer();
@@ -52,6 +60,11 @@ public final class GameModel {
 
     public void getStatistics() {
         // TODO: return player statistics - how many electrons they have, who is winner
+        // TODO: also return copy of the current board
+    }
+
+    public Board getCurrentBoardCopy() {
+        return currentBoardState.getBoard().copy();
     }
 
     private BoardState currentBoardState;

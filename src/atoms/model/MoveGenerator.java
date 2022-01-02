@@ -40,7 +40,6 @@ public class MoveGenerator {
         playerElectronCounts[playerId]++;
         boolean allPlayersMoved = state.allPlayersMoved();
         Board board = state.getBoard().copy();
-        board.setSquare(target, new Square(playerId, targetSquare.electronsCount() + 1));
         phases.add(performFirstPhase(board, playerId, target));
         List<SquarePosition> explosions = findExplosions(board);
         while (explosions.size() > 0 && !playerStoleAllElectrons(playerId, playerElectronCounts, allPlayersMoved)) {
@@ -56,8 +55,9 @@ public class MoveGenerator {
         for (int i = 0; i < board.getSize(); i++) {
             for (int j = 0; j < board.getSize(); j++) {
                 SquarePosition position = new SquarePosition(i, j);
+                Square square = board.getSquare(position);
                 List<SquarePosition> explosionTargets = getExplosionTargets(board, position);
-                if (explosionTargets.size() > 0) {
+                if (square.electronsCount() >= explosionTargets.size()) {
                     explosions.add(position);
                 }
             }
@@ -91,7 +91,9 @@ public class MoveGenerator {
                 int oldElectronsCount = square.electronsCount();
                 int newElectronsCount = oldElectronsCount + 1;
                 if (oldPlayerId != playerId) {
-                    playerElectronCounts[oldPlayerId] -= oldElectronsCount;
+                    if (oldPlayerId != Board.NO_PLAYER_ID) {
+                        playerElectronCounts[oldPlayerId] -= oldElectronsCount;
+                    }
                     playerElectronCounts[playerId] += oldElectronsCount;
                 }
                 board.setSquare(explosionTarget, new Square(newPlayerId, newElectronsCount));
@@ -149,7 +151,9 @@ public class MoveGenerator {
             }
             int oldPlayerId = square.playerId();
             if (oldPlayerId != playerId) {
-                playerElectronCounts[oldPlayerId] -= oldElectronsCount;
+                if (oldPlayerId != Board.NO_PLAYER_ID) {
+                    playerElectronCounts[oldPlayerId] -= oldElectronsCount;
+                }
                 playerElectronCounts[playerId] += oldElectronsCount;
             }
             int newPlayerId;

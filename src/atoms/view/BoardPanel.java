@@ -20,7 +20,7 @@ public class BoardPanel extends JPanel {
 
         explosions = new ArrayList<>();
         targets = new ArrayList<>();
-
+        /*/
         for (int i = 0; i < 8; i++) {
             board.setSquare(i, i, new Square(0, i));
         }
@@ -35,10 +35,19 @@ public class BoardPanel extends JPanel {
         targets.add(new SquarePosition(2, 0));
         targets.add(new SquarePosition(0, 0));
         targets.add(new SquarePosition(1, 1));
+        /**/
     }
 
     public void setBoard(Board board) {
         this.board = board;
+    }
+
+    public void setTargets(List<SquarePosition> targets) {
+        this.targets = targets;
+    }
+
+    public void setExplosions(List<SquarePosition> explosions) {
+        this.explosions = explosions;
     }
 
     public Board getBoard() {
@@ -47,9 +56,9 @@ public class BoardPanel extends JPanel {
 
     public SquarePosition getSquarePositionFromPoint(int x, int y) {
         int squareSize = getSquareSize();
-        int row = x / squareSize;
-        int column = y / squareSize;
-        if (row < board.getSize() || column < board.getSize()) {
+        int row = y / squareSize;
+        int column = x / squareSize;
+        if (row >= board.getSize() || column >= board.getSize()) {
             return null;
         }
         return new SquarePosition(row, column);
