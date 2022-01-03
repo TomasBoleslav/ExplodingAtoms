@@ -25,6 +25,8 @@ import java.util.Collections;
 public final class GameModel {
     public static final int PLAYERS_COUNT = 2;
     private static final int MINIMAX_DEPTH = 2;
+    private int moveCounter = 0;
+    private int winnerId;
 
     public GameModel() {
         this(8);
@@ -33,6 +35,7 @@ public final class GameModel {
     public GameModel(int boardSize) {
         currentBoardState = new BoardState(boardSize, PLAYERS_COUNT);
         currentPlayerId = 0;
+        winnerId = Board.NO_PLAYER_ID;
     }
 
     public int getCurrentPlayerId() {
@@ -40,22 +43,47 @@ public final class GameModel {
     }
 
     public DetailedMove performMove(SquarePosition position) {
-        int squarePlayerId = currentBoardState.getBoard().getSquare(position).playerId();
-        if (squarePlayerId != Board.NO_PLAYER_ID && squarePlayerId != currentPlayerId) {
+        if (isGameOver()) {
             return null;
         }
         DetailedMove move = MoveGenerator.createDetailedMove(currentBoardState, currentPlayerId, position);
-        currentBoardState = MoveGenerator.createBoardState(currentBoardState, currentPlayerId, position);
-        switchToNextPlayer();
+        BoardState nextState = MoveGenerator.createBoardState(currentBoardState, currentPlayerId, position);
+        if (move == null || nextState == null) {
+            return null;
+        }
+        switchToNextState(nextState);
         return move;
     }
 
     public DetailedMove performAIMove() {
-        BoardState state = chooseNextBoardStateForAI();
-        DetailedMove move = MoveGenerator.createDetailedMove(currentBoardState, currentPlayerId, state.getTarget());
-        currentBoardState = state;
-        switchToNextPlayer();
+        if (isGameOver()) {
+            return null;
+        }
+        BoardState nextState = chooseNextBoardStateForAI();
+        DetailedMove move = MoveGenerator.createDetailedMove(currentBoardState, currentPlayerId, nextState.getTarget());
+        if (move == null || nextState == null) {
+            return null;
+        }
+        switchToNextState(nextState);
         return move;
+    }
+
+    private void switchToNextState(BoardState nextBoardState) {
+        currentBoardState = nextBoardState;
+        if (nextBoardState.isTerminal()) {
+            winnerId = currentPlayerId;
+        } else {
+            switchToNextPlayer();
+        }
+        moveCounter++;
+    }
+
+    public boolean isGameOver() {
+        return winnerId != Board.NO_PLAYER_ID;
+    }
+
+    public int getWinnerId() {
+        return winnerId;
     }
 
     public void getStatistics() {

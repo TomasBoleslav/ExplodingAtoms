@@ -106,9 +106,6 @@ public class MoveGenerator {
         return new DetailedMovePhase(explosions, targets, board.copy());
     }
 
-    private record IndexedSquarePosition(int index, SquarePosition position) {
-    }
-
     private static boolean playerCanTargetSquare(int playerId, Square targetSquare) {
         int squarePlayerId = targetSquare.playerId();
         return squarePlayerId == Board.NO_PLAYER_ID || squarePlayerId == playerId;
@@ -198,15 +195,5 @@ public class MoveGenerator {
             explosionTargets.add(new SquarePosition(position.row(), nextColumn));
         }
         return explosionTargets;
-    }
-
-    private static List<IndexedSquarePosition> getIndexedExplosionTargets(Board board, IndexedSquarePosition indexedPosition) {
-        List<SquarePosition> explosionTargets = getExplosionTargets(board, indexedPosition.position());
-        List<IndexedSquarePosition> indexedExplosionTargets = new ArrayList<>();
-        int targetIndex = indexedPosition.index() + 1;
-        for (SquarePosition explosionTarget : explosionTargets) {
-            indexedExplosionTargets.add(new IndexedSquarePosition(targetIndex, explosionTarget));
-        }
-        return indexedExplosionTargets;
     }
 }

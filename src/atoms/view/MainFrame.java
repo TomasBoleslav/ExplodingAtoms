@@ -55,18 +55,14 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
-
-// TODO: BUG: sometimes when placing an electron, some of existing electrons will disappear
-// - maybe inconsistency between computing DetailedMove and BoardState? - some of them may be computed wrongly
-// - we display boardAfter from DetailedMovePhase, but assign currentBoardState by computeNextBoardState
-// - computation of phases or states is wrong and that causes disappearances of some electrons
-// - it was observed only after multiple explosions (maybe computation of explosions is incorrect)
-
+import java.util.List;
 
 public final class MainFrame extends JFrame {
     public MainFrame() {
         setTitle("Exploding Atoms");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        isAIPlayer = new boolean[2];
         setLayout(new BorderLayout());
         cardLayout = new CardLayout();
         contentPanel = new JPanel(cardLayout);
@@ -74,6 +70,7 @@ public final class MainFrame extends JFrame {
         gamePanel = createGamePanel();
         contentPanel.add(menuPanel, MENU_PANEL_NAME);
         contentPanel.add(gamePanel, GAME_PANEL_NAME);
+
         setContentPane(contentPanel);
         pack();
         setVisible(true);
@@ -88,8 +85,8 @@ public final class MainFrame extends JFrame {
         heading.setHorizontalAlignment(SwingConstants.CENTER);
 
         JPanel settingsPanel = new JPanel(new GridLayout(3, 1));
-        JPanel player1Settings = createPlayerSettingsPanel(1);
-        JPanel player2Settings = createPlayerSettingsPanel(2);
+        JPanel player1Settings = createPlayerSettingsPanel(0);
+        JPanel player2Settings = createPlayerSettingsPanel(1);
         settingsPanel.add(player1Settings);
         settingsPanel.add(player2Settings);
 
@@ -106,14 +103,22 @@ public final class MainFrame extends JFrame {
         return menuPanel;
     }
 
-    private JPanel createPlayerSettingsPanel(int playerNumber) {
+    private JPanel createPlayerSettingsPanel(int playerId) {
         JPanel playerSettings = new JPanel(new FlowLayout());
-        JLabel label = new JLabel("Player " + playerNumber + ":");
-        JComboBox<String> comboBox = new JComboBox<>(new String[] {"Human", "Computer"});
+        JLabel label = new JLabel("Player " + (playerId + 1) + ":");
         label.setFont(fontNormal);
-        comboBox.setFont(fontNormal);
+        JComboBox<String> playerTypeComboBox = new JComboBox<>(new String[] {HUMAN_PLAYER, AI_PLAYER});
+        playerTypeComboBox.addItemListener(e -> {
+            String playerType = (String)playerTypeComboBox.getSelectedItem();
+            if (AI_PLAYER.equals(playerType)) {
+                isAIPlayer[playerId] = true;
+            } else {
+                isAIPlayer[playerId] = false;
+            }
+        });
+        playerTypeComboBox.setFont(fontNormal);
         playerSettings.add(label);
-        playerSettings.add(comboBox);
+        playerSettings.add(playerTypeComboBox);
         return playerSettings;
     }
 
@@ -137,6 +142,10 @@ public final class MainFrame extends JFrame {
         boardPanel.addMouseListener(new MouseListener() {
             @Override
             public void mouseClicked(MouseEvent e) {
+                // TODO: set a guard boolean displayingMove
+                if (isAIPlayer[gameModel.getCurrentPlayerId()]) {
+                    return;
+                }
                 SquarePosition target = boardPanel.getSquarePositionFromPoint(e.getX(), e.getY());
                 if (target == null) {
                     return;
@@ -145,23 +154,10 @@ public final class MainFrame extends JFrame {
                 if (move == null) {
                     return;
                 }
-                for (DetailedMovePhase phase : move.phases()) {
-                    boardPanel.setExplosions(phase.explosions());
-                    boardPanel.setTargets(phase.targets());
-                    boardPanel.paintImmediately(0, 0, boardPanel.getWidth(), boardPanel.getHeight());
-                    try {
-                        Thread.sleep(200);
-                    } catch (InterruptedException ex) {
-                    }
-                    boardPanel.setExplosions(null);
-                    boardPanel.setTargets(null);
-                    boardPanel.setBoard(phase.boardAfter());
-                    boardPanel.paintImmediately(0, 0, boardPanel.getWidth(), boardPanel.getHeight());
-                    try {
-                        Thread.sleep(200);
-                    } catch (InterruptedException ex) {
-                    }
-                }
+                showMove(move, false);
+                updateGameStatus();
+                // TODO: if next player is AI, start the move immediately - be careful, possible stack overflow
+                // - maybe dispatch event that will be executed later? invokeLater or something
             }
             @Override
             public void mousePressed(MouseEvent e) {}
@@ -175,6 +171,58 @@ public final class MainFrame extends JFrame {
         return boardPanel;
     }
 
+    private void updateGameStatus() {
+        if (gameModel.isGameOver()) {
+            int winnerNumber = playerNumberFromId(gameModel.getWinnerId());
+            currentPlayerLabel.setText("Player " + winnerNumber + " has won!");
+        } else {
+            int currentPlayerNumber = playerNumberFromId(gameModel.getCurrentPlayerId());
+            currentPlayerLabel.setText("Player " + currentPlayerNumber + " on the move");
+        }
+    }
+
+    private int playerNumberFromId(int playerId) {
+        return playerId + 1;
+    }
+
+    private void showMove(DetailedMove move, boolean markFirstPhase) {
+        boolean isFirstPhase = true;
+        for (DetailedMovePhase phase : move.phases()) {
+            if (isFirstPhase) {
+                if (markFirstPhase) {
+                    drawExplosionsAndTargets(phase.explosions(), phase.targets());
+                    sleep(300);
+                }
+                isFirstPhase = false;
+            } else {
+                sleep(300);
+                drawExplosionsAndTargets(phase.explosions(), phase.targets());
+                sleep(300);
+            }
+            drawBoard(phase.boardAfter());
+        }
+    }
+
+    private void drawExplosionsAndTargets(List<SquarePosition> explosions, List<SquarePosition> targets) {
+        boardPanel.setExplosions(explosions);
+        boardPanel.setTargets(targets);
+        boardPanel.paintImmediately(0, 0, boardPanel.getWidth(), boardPanel.getHeight());
+    }
+
+    private void drawBoard(Board board) {
+        boardPanel.setExplosions(null);
+        boardPanel.setTargets(null);
+        boardPanel.setBoard(board);
+        boardPanel.paintImmediately(0, 0, boardPanel.getWidth(), boardPanel.getHeight());
+    }
+
+    private void sleep(int milliseconds) {
+        try {
+            Thread.sleep(milliseconds);
+        } catch (InterruptedException ex) {
+        }
+    }
+
     private JPanel createGameControlPanel() {
         JPanel gameControlPanel = new JPanel(new GridLayout(2, 1));
         gameControlPanel.setBorder(border);
@@ -183,7 +231,7 @@ public final class MainFrame extends JFrame {
         JLabel statusHeading = new JLabel("Status");
         statusHeading.setFont(fontHeading);
         currentPlayerLabel = new JLabel("Player 1 on the move");
-        winnerLabel = new JLabel("Player 1 wins!");
+        winnerLabel = new JLabel("Player 1 has won!");
         winnerLabel.setVisible(false);
         statusPanel.add(statusHeading);
         statusPanel.add(currentPlayerLabel);
@@ -203,8 +251,9 @@ public final class MainFrame extends JFrame {
         gameModel = new GameModel();
         Board board = gameModel.getCurrentBoardCopy();
         boardPanel.setBoard(board);
-        //boardPanel.repaint(); // TODO: is it needed?
+        updateGameStatus();
         cardLayout.show(contentPanel, GAME_PANEL_NAME);
+        // TODO: initiate first AI move if AI plays first
     }
 
     public void quitGame() {
@@ -213,6 +262,8 @@ public final class MainFrame extends JFrame {
 
     private static final String MENU_PANEL_NAME = "menuPanel";
     private static final String GAME_PANEL_NAME = "gamePanel";
+    private static final String HUMAN_PLAYER = "Human";
+    private static final String AI_PLAYER = "Computer";
     private static final Font fontNormal = new Font("Courier New", Font.PLAIN, 14);
     private static final Font fontHeading = new Font("Courier New", Font.BOLD, 32);
     private static final Dimension preferredFrameSize = new Dimension(640, 480);
@@ -225,6 +276,7 @@ public final class MainFrame extends JFrame {
     private JLabel winnerLabel;
     private BoardPanel boardPanel;
     private GameModel gameModel;
+    private boolean[] isAIPlayer;
 
     // TODO: if immediate repainting is a problem, how to paint steps?
 }
