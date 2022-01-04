@@ -55,6 +55,7 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.util.ArrayList;
 import java.util.List;
 
 public final class MainFrame extends JFrame {
@@ -138,11 +139,12 @@ public final class MainFrame extends JFrame {
     }
 
     private JPanel createBoardPanel() {
-        boardPanel = new BoardPanel(new Board(8));
+        boardPanel = new BoardPanel();
         boardPanel.addMouseListener(new MouseListener() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                // TODO: set a guard boolean displayingMove
+                // TODO: set a guard boolean displayingMove ???
+                // if (displayingMove || isAIPlayer[gameModel.getCurrentPlayerId()]) {
                 if (isAIPlayer[gameModel.getCurrentPlayerId()]) {
                     return;
                 }
@@ -150,14 +152,7 @@ public final class MainFrame extends JFrame {
                 if (target == null) {
                     return;
                 }
-                DetailedMove move = gameModel.performMove(target);
-                if (move == null) {
-                    return;
-                }
-                showMove(move, false);
-                updateGameStatus();
-                // TODO: if next player is AI, start the move immediately - be careful, possible stack overflow
-                // - maybe dispatch event that will be executed later? invokeLater or something
+                moveAsHumanPlayer(target);
             }
             @Override
             public void mousePressed(MouseEvent e) {}
@@ -185,21 +180,57 @@ public final class MainFrame extends JFrame {
         return playerId + 1;
     }
 
-    private void showMove(DetailedMove move, boolean markFirstPhase) {
-        boolean isFirstPhase = true;
-        for (DetailedMovePhase phase : move.phases()) {
-            if (isFirstPhase) {
+    // TODO: problem - application is frozen when displaying move
+    // Solution: display phases separately, always use invokeLater
+    // Complications:
+    // - requires use of boolean control variable isDisplayingMove, which will prevent click events on board
+    // - problem if player changes scenes fast - if move is still being displayed
+    //   - old invokes must be detected (using counter variable as gameModel ID?) - inside invokes - and thrown away
+    //     if (gameModelId == myMovePhaseId) { performMovePhase; invokeLater(this function); }
+    // Generalization - RunnableSequence - sequence of jobs to run after each other in sequence with given delay
+    // - internally - create list of lambdas (or Runnable-s), each lambda will perform a job and call next lambda with
+    //   invokeLater
+    // OR JUST YIELD THE THREAD - will it work? does not work
+    // - maybe make a while cycle where sleeping will be done with while loop and yielding until time is up
+
+    // Create ActionListener-s in a loop (store them in list)
+    // Loop through ActionListener-s, create timers - put there another action listener that starts the next timer
+    // new Timer(delay, actionListener for drawing, actionListener for starting nextTimer)
+    // maybe iterate in reverse through phases and create Timer-s from last to first, so that they are known?
+
+    private void animateMove(DetailedMove move, boolean markFirstPhase) {
+        final int DELAY_BETWEEN_MOVES = 300;
+        // model will change when the user starts a new game - can be used to stop performing move
+        GameModel model = gameModel;
+        List<DelayedJob> jobs = new ArrayList<>();
+        for (int i = 0; i < move.phases().size(); i++) {
+            DetailedMovePhase phase = move.phases().get(i);
+            if (i == 0) {
                 if (markFirstPhase) {
                     drawExplosionsAndTargets(phase.explosions(), phase.targets());
-                    sleep(300);
+                    jobs.add(new DelayedJob(DELAY_BETWEEN_MOVES, () -> drawBoard(phase.boardAfter())));
+                } else {
+                    jobs.add(new DelayedJob(0, () -> drawBoard(phase.boardAfter())));
                 }
-                isFirstPhase = false;
             } else {
-                sleep(300);
-                drawExplosionsAndTargets(phase.explosions(), phase.targets());
-                sleep(300);
+                jobs.add(new DelayedJob(DELAY_BETWEEN_MOVES, () -> drawExplosionsAndTargets(phase.explosions(), phase.targets())));
+                jobs.add(new DelayedJob(DELAY_BETWEEN_MOVES, () -> drawBoard(phase.boardAfter())));
             }
-            drawBoard(phase.boardAfter());
+        }
+        int lastJobIndex = jobs.size() - 1;
+        for (int i = 0; i < jobs.size(); i++) {
+            DelayedJob job = jobs.get(i);
+            if (i < lastJobIndex) {
+                DelayedJob nextJob = jobs.get(i + 1);
+                job.addAction(nextJob::run);
+            }
+            job.setShouldCancelFunc(() -> model != gameModel);
+        }
+        if (!jobs.isEmpty()) {
+            displayingMove = true;
+            DelayedJob lastJob = jobs.get(jobs.size() - 1);
+            lastJob.addAction(() -> displayingMove = false);
+            jobs.get(0).run();
         }
     }
 
@@ -249,11 +280,40 @@ public final class MainFrame extends JFrame {
 
     public void playGame() {
         gameModel = new GameModel();
+        displayingMove = false;
         Board board = gameModel.getCurrentBoardCopy();
-        boardPanel.setBoard(board);
+        drawBoard(board);
         updateGameStatus();
         cardLayout.show(contentPanel, GAME_PANEL_NAME);
-        // TODO: initiate first AI move if AI plays first
+        if (isCurrentPlayerAI()) {
+            SwingUtilities.invokeLater(this::moveAsAIPlayer);
+        }
+    }
+
+    private void moveAsHumanPlayer(SquarePosition target) {
+        DetailedMove move = gameModel.performMove(target);
+        performMove(move, false);
+    }
+
+    private void moveAsAIPlayer() {
+        sleep(500);
+        DetailedMove move = gameModel.performAIMove();
+        performMove(move, true);
+    }
+
+    private void performMove(DetailedMove move, boolean markFirstPhase) {
+        if (move == null) {
+            return;
+        }
+        animateMove(move, markFirstPhase);
+        updateGameStatus();
+        if (isCurrentPlayerAI()) {
+            SwingUtilities.invokeLater(this::moveAsAIPlayer);
+        }
+    }
+
+    private boolean isCurrentPlayerAI() {
+        return isAIPlayer[gameModel.getCurrentPlayerId()];
     }
 
     public void quitGame() {
@@ -277,6 +337,8 @@ public final class MainFrame extends JFrame {
     private BoardPanel boardPanel;
     private GameModel gameModel;
     private boolean[] isAIPlayer;
+    private boolean displayingMove;
+    private int currentGameModelId;
 
     // TODO: if immediate repainting is a problem, how to paint steps?
 }

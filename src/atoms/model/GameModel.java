@@ -36,6 +36,20 @@ public final class GameModel {
         currentBoardState = new BoardState(boardSize, PLAYERS_COUNT);
         currentPlayerId = 0;
         winnerId = Board.NO_PLAYER_ID;
+
+        Board board = currentBoardState.getBoard();
+        for (int i = 1; i < 7; i++) {
+            for (int j = 1; j < 7; j++) {
+                int playerId;
+                if ((i + j) % 2 == 0) {
+                    playerId = 0;
+                } else {
+                    playerId = 1;
+                }
+                board.setSquare(new SquarePosition(i, j), new Square(playerId, 3));
+                currentBoardState.getAllElectronCounts()[playerId] += 3;
+            }
+        }
     }
 
     public int getCurrentPlayerId() {

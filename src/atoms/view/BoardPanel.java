@@ -11,32 +11,9 @@ import java.awt.RenderingHints;
 import java.awt.Rectangle;
 import java.awt.Color;
 import java.awt.Point;
-import java.util.ArrayList;
 import java.util.List;
 
 public class BoardPanel extends JPanel {
-    public BoardPanel(Board board) {
-        this.board = board;
-
-        explosions = new ArrayList<>();
-        targets = new ArrayList<>();
-        /*/
-        for (int i = 0; i < 8; i++) {
-            board.setSquare(i, i, new Square(0, i));
-        }
-        explosions.add(new SquarePosition(4, 4));
-        targets.add(new SquarePosition(4, 5));
-        targets.add(new SquarePosition(4, 3));
-        targets.add(new SquarePosition(5, 4));
-        targets.add(new SquarePosition(3, 4));
-
-        board.setSquare(1, 0, new Square(1, 1));
-        explosions.add(new SquarePosition(1, 0));
-        targets.add(new SquarePosition(2, 0));
-        targets.add(new SquarePosition(0, 0));
-        targets.add(new SquarePosition(1, 1));
-        /**/
-    }
 
     public void setBoard(Board board) {
         this.board = board;
@@ -67,17 +44,23 @@ public class BoardPanel extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
+        if (board == null) {
+            return;
+        }
 
-        Graphics2D g2 = (Graphics2D)g;
-        RenderingHints rh = new RenderingHints(
-                RenderingHints.KEY_ANTIALIASING,
-                RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setRenderingHints(rh);
-
+        setAntialiasing(g);
         drawSquares(g);
         drawExplosions(g);
         drawTargets(g);
         drawAtoms(g);
+    }
+
+    private static void setAntialiasing(Graphics g) {
+        Graphics2D g2 = (Graphics2D)g;
+        RenderingHints renderingHints = new RenderingHints(
+                RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setRenderingHints(renderingHints);
     }
 
     private void drawSquares(Graphics g) {
@@ -108,7 +91,7 @@ public class BoardPanel extends JPanel {
         return boardSideLength / board.getSize();
     }
 
-    private boolean squareIsWhite(int i, int j) {
+    private static boolean squareIsWhite(int i, int j) {
         if (i % 2 == 0) {
             return j % 2 == 0;
         } else {
@@ -199,8 +182,8 @@ public class BoardPanel extends JPanel {
     private final static Color whiteSquareColor = Color.WHITE;
     private final static Color blackSquareColor = Color.BLACK;
     private final static Color[] playerColors = new Color[] { Color.CYAN, Color.GREEN };
-    private final static Color explosionSquareColor = new Color(255, 0, 0, 128);
-    private final static Color targetSquareColor = new Color(255, 255, 0, 128);
+    private final static Color explosionSquareColor = new Color(200, 0, 0);
+    private final static Color targetSquareColor = new Color(200, 200, 0);
     private Board board;
     private List<SquarePosition> explosions;
     private List<SquarePosition> targets;

@@ -5,10 +5,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
-// NOTE: stolen squares cannot be used to check if move is winning
-// - it counts empty squares
-// - what if I count only occupied squares?
-
 public class MoveGenerator {
     public static List<BoardState> generateBoardStates(BoardState state, int playerId) {
         List<BoardState> states = new ArrayList<>();
