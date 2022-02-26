@@ -48,6 +48,8 @@ package atoms.view;
 // DETECT DRAW - endless loop of explosions
 
 
+// TODO BUG: game does not wait between Human player move and AI player move
+
 import atoms.model.*;
 
 import javax.swing.*;
@@ -143,9 +145,8 @@ public final class MainFrame extends JFrame {
         boardPanel.addMouseListener(new MouseListener() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                // TODO: set a guard boolean displayingMove ???
-                // if (displayingMove || isAIPlayer[gameModel.getCurrentPlayerId()]) {
-                if (isAIPlayer[gameModel.getCurrentPlayerId()]) {
+                if (displayingMove || isAIPlayer[gameModel.getCurrentPlayerId()]) {
+                    // TODO: isAIPlayer does not work, because
                     return;
                 }
                 SquarePosition target = boardPanel.getSquarePositionFromPoint(e.getX(), e.getY());
@@ -296,16 +297,25 @@ public final class MainFrame extends JFrame {
     }
 
     private void moveAsAIPlayer() {
-        sleep(500);
-        DetailedMove move = gameModel.performAIMove();
-        performMove(move, true);
+        // Also problem - if I invoke this function and then player quits the game before it is executed
+        if (displayingMove) {
+            SwingUtilities.invokeLater(this::moveAsAIPlayer);
+            return;
+        }
+        displayingMove = true;
+        DelayedJob job = new DelayedJob(500, () -> {
+            DetailedMove move = gameModel.performAIMove();
+            performMove(move, true);
+            displayingMove = false;
+        });
+        job.run();
     }
 
     private void performMove(DetailedMove move, boolean markFirstPhase) {
         if (move == null) {
             return;
         }
-        animateMove(move, markFirstPhase);
+        animateMove(move, markFirstPhase); // sets displayingMove = true
         updateGameStatus();
         if (isCurrentPlayerAI()) {
             SwingUtilities.invokeLater(this::moveAsAIPlayer);
