@@ -24,6 +24,9 @@ import java.util.stream.IntStream;
 //   Thus, each wave of explosions is initiated only from white squares or only from black squares.
 //   2 neighbors cannot explode in the same wave, because they have different square colors.
 
+/**
+ * Model of the Exploding Atoms game.
+ */
 public final class GameModel {
     public static final int PLAYERS_COUNT = 2;
     public static final int BOARD_SIZE = 8;
@@ -32,21 +35,47 @@ public final class GameModel {
     private static final Random random = new Random(0);
     private int moveCounter = 0; // TODO: remove
     private int winnerId;
+    private BoardState currentBoardState;
+    private int currentPlayerId;
 
+    /**
+     * Creates a new game model.
+     */
     public GameModel() {
-        this(BOARD_SIZE);
-    }
-
-    public GameModel(int boardSize) {
-        currentBoardState = new BoardState(boardSize, PLAYERS_COUNT);
+        currentBoardState = new BoardState(BOARD_SIZE, PLAYERS_COUNT);
         currentPlayerId = 0;
         winnerId = Board.NO_PLAYER_ID;
     }
 
+    /**
+     * Gets the ID of the current player.
+     * @return The ID of the current player.
+     */
     public int getCurrentPlayerId() {
         return currentPlayerId;
     }
 
+    /**
+     * Checks whether the game is over.
+     * @return An indicator whether the game is over.
+     */
+    public boolean isGameOver() {
+        return winnerId != Board.NO_PLAYER_ID;
+    }
+
+    /**
+     * Gets the ID of the winner.
+     * @return The ID of the winner.
+     */
+    public int getWinnerId() {
+        return winnerId;
+    }
+
+    /**
+     * Performs move by the current player.
+     * @param position The target position where to place an electron.
+     * @return The move that was performed.
+     */
     public DetailedMove performMove(SquarePosition position) {
         if (isGameOver()) {
             return null;
@@ -60,6 +89,10 @@ public final class GameModel {
         return move;
     }
 
+    /**
+     * Performs move as an AI player.
+     * @return The move that was performed.
+     */
     public DetailedMove performAIMove() {
         if (isGameOver()) {
             return null;
@@ -73,50 +106,56 @@ public final class GameModel {
         return move;
     }
 
-    private void switchToNextState(BoardState nextBoardState) {
-        currentBoardState = nextBoardState;
-        if (nextBoardState.isTerminal()) {
-            winnerId = currentPlayerId;
-        } else {
-            switchToNextPlayer();
-        }
-        moveCounter++;
-    }
-
-    public boolean isGameOver() {
-        return winnerId != Board.NO_PLAYER_ID;
-    }
-
-    public int getWinnerId() {
-        return winnerId;
-    }
-
     public void getStatistics() {
         // TODO: return player statistics - how many electrons they have, who is winner
         // TODO: also return copy of the current board
     }
 
+    /**
+     * Gets copy of the current board.
+     * @return The copy of the current board.
+     */
     public Board getCurrentBoardCopy() {
         return currentBoardState.getBoard().copy();
     }
 
-    private BoardState currentBoardState;
-    private int currentPlayerId;
-
-    private void switchToNextPlayer() {
-        currentPlayerId = getNextPlayerId(currentPlayerId);
+    /**
+     * Switches the current state to another one.
+     * @param nextBoardState The state to switch to.
+     */
+    private void switchToNextState(BoardState nextBoardState) {
+        currentBoardState = nextBoardState;
+        if (nextBoardState.isTerminal()) {
+            winnerId = currentPlayerId;
+        } else {
+            currentPlayerId = getNextPlayerId(currentPlayerId);
+        }
+        moveCounter++;
     }
 
+    /**
+     * Gets ID of the player who is on the move after the given player.
+     * @param playerId The ID of a player.
+     * @return The ID of the player who is on the move after the given player.
+     */
     private int getNextPlayerId(int playerId) {
         return (playerId + 1) % PLAYERS_COUNT;
     }
 
+    /**
+     * Checks whether the given player is a maximizing player in the minimax algorithm.
+     * @param playerId The ID of a player.
+     * @return The indicator whether the player is a maximizing player in the minimax algorithm.
+     */
     private boolean isMaximizingPlayer(int playerId) {
         return playerId % 2 == 0;
     }
 
+    /**
+     * Chooses a move for AI player using the minimax algorithm.
+     * @return
+     */
     private BoardState chooseAIMove() {
-        // Generate moves for current player
         List<BoardState> states = MoveGenerator.generateAllMoves(currentBoardState, currentPlayerId);
         List<Integer> evaluations = new ArrayList<>();
         int nextPlayerId = getNextPlayerId(currentPlayerId);
@@ -124,7 +163,6 @@ public final class GameModel {
             int value = minimax(state, MINIMAX_DEPTH, Integer.MIN_VALUE, Integer.MAX_VALUE, nextPlayerId);
             evaluations.add(value);
         }
-        // TODO: if there are more states with same evaluation, choose 1 randomly
         int bestValue;
         if (isMaximizingPlayer(currentPlayerId)) {
             bestValue = Collections.max(evaluations);
@@ -134,10 +172,17 @@ public final class GameModel {
         int[] bestStateIndices = IntStream.range(0, states.size()).filter(i -> evaluations.get(i) == bestValue).toArray();
         int bestStateIndex = bestStateIndices[random.nextInt(bestStateIndices.length)];
         return states.get(bestStateIndex);
-        /*int searchedIndex = evaluations.indexOf(bestValue);
-        return states.get(searchedIndex);*/
     }
 
+    /**
+     * Evaluates a game state using the minimax algorithm.
+     * @param state The state to evaluate.
+     * @param depth The depth of the recursion.
+     * @param alpha The alpha from the alpha-beta pruning algorithm.
+     * @param beta The beta from the alpha-beta pruning algorithm.
+     * @param playerId The ID of the player on the move.
+     * @return The evaluation of the state.
+     */
     private int minimax(BoardState state, int depth, int alpha, int beta, int playerId) {
         if (depth == 0 || state.isTerminal()) {
             return evaluateBoardState(state);
@@ -169,8 +214,11 @@ public final class GameModel {
         }
     }
 
-    // TODO: there must be a mistake in computing electron counts - Player1 has 1 and Player2 has 3 - not possible
-    //   - maybe the electronCounts array is somehow shared and changed in other places?
+    /**
+     * Evaluates the given state.
+     * @param state The state to evaluate.
+     * @return The evaluation of the state.
+     */
     private static int evaluateBoardState(BoardState state) {
         int electronsCount1 = state.getElectronsCount(0);
         int electronsCount2 = state.getElectronsCount(1);
