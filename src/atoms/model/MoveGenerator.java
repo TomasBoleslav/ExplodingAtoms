@@ -5,8 +5,19 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
+// TODO: make it simpler
+// MoveGenerator
+// - generateMove(state, playerID) -> BoardState
+// - generateMoves(state, playerID, target) -> List<BoardState>
+// - generateDetailedMove() -> DetailedMove without phases, single explosions
+//
+// DetailedMove = SquarePosition target, List<Explosions> explosions
+// Explosion = SquarePosition origin, List<SquarePosition> targets
+//
+
+
 public class MoveGenerator {
-    public static List<BoardState> generateBoardStates(BoardState state, int playerId) {
+    public static List<BoardState> generateAllMoves(BoardState state, int playerId) {
         List<BoardState> states = new ArrayList<>();
         boolean allPlayersMoved = state.allPlayersMoved();
         List<SquarePosition> targets = generateAllMoveTargets(state.getBoard(), playerId);
@@ -17,7 +28,7 @@ public class MoveGenerator {
         return states;
     }
 
-    public static BoardState createBoardState(BoardState state, int playerId, SquarePosition target) {
+    public static BoardState generateMove(BoardState state, int playerId, SquarePosition target) {
         Square targetSquare = state.getBoard().getSquare(target);
         if (!playerCanTargetSquare(playerId, targetSquare)) {
             return null;
@@ -26,7 +37,7 @@ public class MoveGenerator {
         return createNextBoardState(state, target, playerId, allPlayersMoved);
     }
 
-    public static DetailedMove createDetailedMove(BoardState state, int playerId, SquarePosition target) {
+    public static DetailedMove generateDetailedMove(BoardState state, int playerId, SquarePosition target) {
         Square targetSquare = state.getBoard().getSquare(target);
         if (!playerCanTargetSquare(playerId, targetSquare)) {
             return null;
@@ -127,22 +138,22 @@ public class MoveGenerator {
             int playerId,
             boolean allPlayersMoved) {
         int[] playerElectronCounts = state.getAllElectronCounts().clone();
-        playerElectronCounts[playerId]++;
+        playerElectronCounts[playerId]++; // TODO: What if this is raised again in while cycle
         Board board = state.getBoard().copy();
         Queue<SquarePosition> targets = new LinkedList<>();
         targets.add(target);
         while (!targets.isEmpty() && !playerStoleAllElectrons(playerId, playerElectronCounts, allPlayersMoved)) {
             SquarePosition currentTarget = targets.remove();
-            Square square = board.getSquare(currentTarget);
+            Square currentTargetSquare = board.getSquare(currentTarget);
             List<SquarePosition> explosionTargets = getExplosionTargets(board, currentTarget);
             int minElectronsCountForExplosion = explosionTargets.size();
-            int oldElectronsCount = square.electronsCount();
+            int oldElectronsCount = currentTargetSquare.electronsCount();
             int newElectronsCount = oldElectronsCount + 1;
             if (newElectronsCount >= minElectronsCountForExplosion) {
                 newElectronsCount -= minElectronsCountForExplosion;
                 targets.addAll(explosionTargets);
             }
-            int oldPlayerId = square.playerId();
+            int oldPlayerId = currentTargetSquare.playerId();
             if (oldPlayerId != playerId) {
                 if (oldPlayerId != Board.NO_PLAYER_ID) {
                     playerElectronCounts[oldPlayerId] -= oldElectronsCount;

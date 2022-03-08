@@ -3,6 +3,8 @@ package atoms.model;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Collections;
+import java.util.Random;
+import java.util.stream.IntStream;
 
 // Mathematical proofs:
 // 1. If there is endless loop of explosions, the player who caused it will take over all enemy electrons
@@ -24,34 +26,21 @@ import java.util.Collections;
 
 public final class GameModel {
     public static final int PLAYERS_COUNT = 2;
-    private static final int MINIMAX_DEPTH = 2;
-    private int moveCounter = 0;
+    public static final int BOARD_SIZE = 8;
+
+    private static final int MINIMAX_DEPTH = 3;
+    private static final Random random = new Random(0);
+    private int moveCounter = 0; // TODO: remove
     private int winnerId;
 
     public GameModel() {
-        this(8);
+        this(BOARD_SIZE);
     }
 
     public GameModel(int boardSize) {
         currentBoardState = new BoardState(boardSize, PLAYERS_COUNT);
         currentPlayerId = 0;
         winnerId = Board.NO_PLAYER_ID;
-        // TODO: remove
-        /*/
-        Board board = currentBoardState.getBoard();
-        for (int i = 1; i < 7; i++) {
-            for (int j = 1; j < 7; j++) {
-                int playerId;
-                if ((i + j) % 2 == 0) {
-                    playerId = 0;
-                } else {
-                    playerId = 1;
-                }
-                board.setSquare(new SquarePosition(i, j), new Square(playerId, 3));
-                currentBoardState.getAllElectronCounts()[playerId] += 3;
-            }
-        }
-        /**/
     }
 
     public int getCurrentPlayerId() {
@@ -62,8 +51,8 @@ public final class GameModel {
         if (isGameOver()) {
             return null;
         }
-        DetailedMove move = MoveGenerator.createDetailedMove(currentBoardState, currentPlayerId, position);
-        BoardState nextState = MoveGenerator.createBoardState(currentBoardState, currentPlayerId, position);
+        DetailedMove move = MoveGenerator.generateDetailedMove(currentBoardState, currentPlayerId, position);
+        BoardState nextState = MoveGenerator.generateMove(currentBoardState, currentPlayerId, position);
         if (move == null || nextState == null) {
             return null;
         }
@@ -75,8 +64,8 @@ public final class GameModel {
         if (isGameOver()) {
             return null;
         }
-        BoardState nextState = chooseNextBoardStateForAI();
-        DetailedMove move = MoveGenerator.createDetailedMove(currentBoardState, currentPlayerId, nextState.getTarget());
+        BoardState nextState = chooseAIMove();
+        DetailedMove move = MoveGenerator.generateDetailedMove(currentBoardState, currentPlayerId, nextState.getTarget());
         if (move == null || nextState == null) {
             return null;
         }
@@ -126,29 +115,34 @@ public final class GameModel {
         return playerId % 2 == 0;
     }
 
-    private BoardState chooseNextBoardStateForAI() {
-        List<BoardState> states = MoveGenerator.generateBoardStates(currentBoardState, currentPlayerId);
+    private BoardState chooseAIMove() {
+        // Generate moves for current player
+        List<BoardState> states = MoveGenerator.generateAllMoves(currentBoardState, currentPlayerId);
         List<Integer> evaluations = new ArrayList<>();
         int nextPlayerId = getNextPlayerId(currentPlayerId);
         for (BoardState state : states) {
             int value = minimax(state, MINIMAX_DEPTH, Integer.MIN_VALUE, Integer.MAX_VALUE, nextPlayerId);
             evaluations.add(value);
         }
-        int searchedValue;
+        // TODO: if there are more states with same evaluation, choose 1 randomly
+        int bestValue;
         if (isMaximizingPlayer(currentPlayerId)) {
-            searchedValue = Collections.max(evaluations);
+            bestValue = Collections.max(evaluations);
         } else {
-            searchedValue = Collections.min(evaluations);
+            bestValue = Collections.min(evaluations);
         }
-        int searchedIndex = evaluations.indexOf(searchedValue);
-        return states.get(searchedIndex);
+        int[] bestStateIndices = IntStream.range(0, states.size()).filter(i -> evaluations.get(i) == bestValue).toArray();
+        int bestStateIndex = bestStateIndices[random.nextInt(bestStateIndices.length)];
+        return states.get(bestStateIndex);
+        /*int searchedIndex = evaluations.indexOf(bestValue);
+        return states.get(searchedIndex);*/
     }
 
     private int minimax(BoardState state, int depth, int alpha, int beta, int playerId) {
         if (depth == 0 || state.isTerminal()) {
             return evaluateBoardState(state);
         }
-        List<BoardState> states = MoveGenerator.generateBoardStates(state, playerId);
+        List<BoardState> states = MoveGenerator.generateAllMoves(state, playerId);
         int nextPlayerId = getNextPlayerId(playerId);
         if (isMaximizingPlayer(playerId)) {
             int maxValue = Integer.MIN_VALUE;
@@ -175,6 +169,8 @@ public final class GameModel {
         }
     }
 
+    // TODO: there must be a mistake in computing electron counts - Player1 has 1 and Player2 has 3 - not possible
+    //   - maybe the electronCounts array is somehow shared and changed in other places?
     private static int evaluateBoardState(BoardState state) {
         int electronsCount1 = state.getElectronsCount(0);
         int electronsCount2 = state.getElectronsCount(1);

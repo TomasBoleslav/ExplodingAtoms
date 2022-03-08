@@ -45,9 +45,6 @@ package atoms.view;
 //   or you can also mark target positions with e.g. yellow color
 // - VerboseMove: int playerID, List<SingleMove>
 
-// DETECT DRAW - endless loop of explosions
-
-
 // TODO BUG: game does not wait between Human player move and AI player move
 
 import atoms.model.*;
@@ -57,7 +54,6 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
-import java.util.ArrayList;
 import java.util.List;
 
 public final class MainFrame extends JFrame {
