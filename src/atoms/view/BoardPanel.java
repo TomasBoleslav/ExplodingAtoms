@@ -36,7 +36,7 @@ public class BoardPanel extends JPanel {
 
     /**
      * Sets squares with explosions.
-     * @param explosions
+     * @param explosions Squares with explosions.
      */
     public void setExplosions(List<SquarePosition> explosions) {
         this.explosions = explosions;
