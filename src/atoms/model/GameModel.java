@@ -6,24 +6,6 @@ import java.util.Collections;
 import java.util.Random;
 import java.util.stream.IntStream;
 
-// Mathematical proofs:
-// 1. If there is endless loop of explosions, the player who caused it will take over all enemy electrons
-// Proof:
-//   By contradiction. Let's assume player causes an endless loop and an enemy square will be left untouched.
-//   Let's take the boundary inside which the explosion of the loop happen and outside not. The number of squares
-//   neighboring the boundary is finite. Every time explosion happens inside the boundary, an electron will be sent
-//   outside. Thus squares neighboring the boundary have an endless supply of electrons, so they must explode too at
-//   one point. Hence, we have the contradiction with the fact that atoms outside the boundary do not explode.
-// Consequence: We can stop the game when all squares belong to 1 player
-//
-// 2. Two neighboring atoms cannot explode at the same time
-// Proof:
-//   Explosions happen in waves and are initiated with 1 explosion, when we put 1 electron to the board.
-//   Let's say we put this electron to white square. Then in the next wave, the explosions can be initiated only from
-//   black squares. In the following wave, the explosions can be initiated only from the white squares, etc.
-//   Thus, each wave of explosions is initiated only from white squares or only from black squares.
-//   2 neighbors cannot explode in the same wave, because they have different square colors.
-
 /**
  * Model of the Exploding Atoms game.
  */
@@ -33,7 +15,6 @@ public final class GameModel {
 
     private static final int MINIMAX_DEPTH = 3;
     private static final Random random = new Random(0);
-    private int moveCounter = 0; // TODO: remove
     private int winnerId;
     private BoardState currentBoardState;
     private int currentPlayerId;
@@ -106,17 +87,12 @@ public final class GameModel {
         return move;
     }
 
-    public void getStatistics() {
-        // TODO: return player statistics - how many electrons they have, who is winner
-        // TODO: also return copy of the current board
-    }
-
     /**
      * Gets copy of the current board.
      * @return The copy of the current board.
      */
     public Board getCurrentBoardCopy() {
-        return currentBoardState.getBoard().copy();
+        return currentBoardState.getBoard().deepCopy();
     }
 
     /**
@@ -130,7 +106,6 @@ public final class GameModel {
         } else {
             currentPlayerId = getNextPlayerId(currentPlayerId);
         }
-        moveCounter++;
     }
 
     /**
@@ -231,9 +206,4 @@ public final class GameModel {
         }
         return electronsCount1 - electronsCount2;
     }
-
-    // Moves ordering during minimax:
-    // - go through all board changes, count differences (how many electrons were added + how many electrons of enemy player
-    //   were removed - actually not, because electrons from enemy player are added to player)
-    // When you reach the last depth, go through the whole board and count how many electrons belongs to whom
 }

@@ -5,16 +5,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
-// TODO: make it simpler
-// MoveGenerator
-// - generateMove(state, playerID) -> BoardState
-// - generateMoves(state, playerID, target) -> List<BoardState>
-// - generateDetailedMove() -> DetailedMove without phases, single explosions
-//
-// DetailedMove = SquarePosition target, List<Explosions> explosions
-// Explosion = SquarePosition origin, List<SquarePosition> targets
-//
-
 /**
  * Generator for moves.
  */
@@ -69,7 +59,7 @@ public class MoveGenerator {
         int[] playerElectronCounts = state.getAllElectronCounts().clone();
         playerElectronCounts[playerId]++;
         boolean allPlayersMoved = state.allPlayersMoved();
-        Board board = state.getBoard().copy();
+        Board board = state.getBoard().deepCopy();
         phases.add(performFirstPhase(board, playerId, target));
         List<SquarePosition> explosions = findExplosions(board);
         while (explosions.size() > 0 && !playerStoleAllElectrons(playerId, playerElectronCounts, allPlayersMoved)) {
@@ -114,7 +104,7 @@ public class MoveGenerator {
         Square targetSquare = board.getSquare(target);
         int newElectronsCount = targetSquare.electronsCount() + 1;
         board.setSquare(target, new Square(playerId, newElectronsCount));
-        return new DetailedMovePhase(explosions, targets, board.copy());
+        return new DetailedMovePhase(explosions, targets, board.deepCopy());
     }
 
     /**
@@ -153,7 +143,7 @@ public class MoveGenerator {
             int electronsCountAfterExplosion = explosionSquare.electronsCount() - minElectronsCountForExplosion;
             board.setSquare(explosion, new Square(playerId, electronsCountAfterExplosion));
         }
-        return new DetailedMovePhase(explosions, targets, board.copy());
+        return new DetailedMovePhase(explosions, targets, board.deepCopy());
     }
 
     /**
@@ -178,7 +168,6 @@ public class MoveGenerator {
         for (int i = 0; i < board.getSize(); i++) {
             for (int j = 0; j < board.getSize(); j++) {
                 Square square = board.getSquare(i, j);
-                // TODO: add position only if there is an owned square in close proximity (e.g. max 2 squares away)
                 if (canPlayerTargetSquare(playerId, square)) {
                     origins.add(new SquarePosition(i, j));
                 }
@@ -202,7 +191,7 @@ public class MoveGenerator {
             boolean allPlayersMoved) {
         int[] playerElectronCounts = state.getAllElectronCounts().clone();
         playerElectronCounts[playerId]++;
-        Board board = state.getBoard().copy();
+        Board board = state.getBoard().deepCopy();
         Queue<SquarePosition> targets = new LinkedList<>();
         targets.add(target);
         while (!targets.isEmpty() && !playerStoleAllElectrons(playerId, playerElectronCounts, allPlayersMoved)) {

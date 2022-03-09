@@ -68,8 +68,7 @@ public final class Board {
      * Creates a deep copy of the board.
      * @return A deep copy of the board.
      */
-    public Board copy() {
-        // only makes sense if squares are immutable
+    public Board deepCopy() {
         Square[][] copySquares = new Square[squares.length][];
         for (int i = 0; i < squares.length; i++) {
             copySquares[i] = squares[i].clone();

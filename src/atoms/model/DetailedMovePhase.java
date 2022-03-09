@@ -2,8 +2,12 @@ package atoms.model;
 
 import java.util.List;
 
-// NOTE: explosions and targets are separated so that first move can be expressed as phase (no explosions, 1 target)
-
+/**
+ * Phase of a detailed move with explosions happening at the same time.
+ * @param explosions Positions of explosions.
+ * @param targets Positions of explosion targets.
+ * @param boardAfter The board after the explosions happen.
+ */
 public record DetailedMovePhase(
         List<SquarePosition> explosions,
         List<SquarePosition> targets,
