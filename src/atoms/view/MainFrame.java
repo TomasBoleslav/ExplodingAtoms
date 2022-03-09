@@ -18,10 +18,10 @@ public final class MainFrame extends JFrame {
      * Creates the main frame.
      */
     public MainFrame() {
-        setTitle("Exploding Atoms");
+        setTitle(TITLE);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        isAIPlayer = new boolean[2];
+        isAIPlayer = new boolean[GameModel.PLAYERS_COUNT];
         setLayout(new BorderLayout());
         cardLayout = new CardLayout();
         contentPanel = new JPanel(cardLayout);
@@ -35,6 +35,7 @@ public final class MainFrame extends JFrame {
         setVisible(true);
     }
 
+    private static final String TITLE = "Exploding Atoms";
     private static final String MENU_PANEL_NAME = "menuPanel";
     private static final String GAME_PANEL_NAME = "gamePanel";
     private static final String HUMAN_PLAYER = "Human";
@@ -43,6 +44,7 @@ public final class MainFrame extends JFrame {
     private static final Font fontHeading = new Font("Courier New", Font.BOLD, 32);
     private static final Dimension preferredFrameSize = new Dimension(640, 480);
     private static final EmptyBorder border = new EmptyBorder(10, 10, 10, 10);
+    private static final int DELAY_BETWEEN_MOVE_PHASES = 300;
     private JPanel contentPanel;
     private CardLayout cardLayout;
     private JPanel menuPanel;
@@ -113,16 +115,12 @@ public final class MainFrame extends JFrame {
      * @return A panel with the game.
      */
     private JPanel createGamePanel() {
-        //JPanel gamePanel = new JPanel(new GridLayout(1, 2));
         JPanel gamePanel = new JPanel(new BorderLayout());
         gamePanel.setBorder(border);
 
         gamePanel.add(createBoardPanel(), BorderLayout.CENTER);
         gamePanel.add(createGameControlPanel(), BorderLayout.LINE_END);
-        /*
-        gamePanel.add(createBoardPanel());
-        gamePanel.add(createStatisticsPanel());
-*/
+
         gamePanel.setPreferredSize(preferredFrameSize);
         return gamePanel;
     }
@@ -137,7 +135,6 @@ public final class MainFrame extends JFrame {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (isAIPlayer[gameModel.getCurrentPlayerId()]) {
-                    // TODO: isAIPlayer does not work, because
                     return;
                 }
                 SquarePosition target = boardPanel.getSquarePositionFromPoint(e.getX(), e.getY());
@@ -186,21 +183,20 @@ public final class MainFrame extends JFrame {
      * @param markFirstPhase An indicator whether the first phase should be marked.
      */
     private void animateMove(DetailedMove move, boolean markFirstPhase) {
-        final int DELAY_BETWEEN_MOVES = 300;
         for (int i = 0; i < move.phases().size(); i++) {
             DetailedMovePhase phase = move.phases().get(i);
             if (i == 0) {
                 if (markFirstPhase) {
                     drawExplosionsAndTargets(phase.explosions(), phase.targets());
-                    sleep(DELAY_BETWEEN_MOVES);
+                    sleep(DELAY_BETWEEN_MOVE_PHASES);
                     drawBoard(phase.boardAfter());
                 } else {
                     drawBoard(phase.boardAfter());
                 }
             } else {
-                sleep(DELAY_BETWEEN_MOVES);
+                sleep(DELAY_BETWEEN_MOVE_PHASES);
                 drawExplosionsAndTargets(phase.explosions(), phase.targets());
-                sleep(DELAY_BETWEEN_MOVES);
+                sleep(DELAY_BETWEEN_MOVE_PHASES);
                 drawBoard(phase.boardAfter());
             }
         }
@@ -286,7 +282,13 @@ public final class MainFrame extends JFrame {
      * @param target The target square where to add an electron.
      */
     private void moveAsHumanPlayer(SquarePosition target) {
+        if (gameModel.isGameOver()) {
+            return;
+        }
         DetailedMove move = gameModel.performMove(target);
+        if (move == null) {
+            return;
+        }
         performMove(move, false);
     }
 
@@ -294,8 +296,11 @@ public final class MainFrame extends JFrame {
      * Performs a move as an AI player.
      */
     private void moveAsAIPlayer() {
+        if (gameModel.isGameOver()) {
+            return;
+        }
         DetailedMove move = gameModel.performAIMove();
-        sleep(300);
+        sleep(DELAY_BETWEEN_MOVE_PHASES);
         performMove(move, true);
     }
 
