@@ -15,8 +15,17 @@ import java.util.Queue;
 // Explosion = SquarePosition origin, List<SquarePosition> targets
 //
 
-
+/**
+ * Generator for moves.
+ */
 public class MoveGenerator {
+
+    /**
+     * Generates all moves for a player.
+     * @param state The initial state.
+     * @param playerId The ID of the player making the move.
+     * @return The list of all possible moves.
+     */
     public static List<BoardState> generateAllMoves(BoardState state, int playerId) {
         List<BoardState> states = new ArrayList<>();
         boolean allPlayersMoved = state.allPlayersMoved();
@@ -28,18 +37,32 @@ public class MoveGenerator {
         return states;
     }
 
+    /**
+     * Generates a move of a player.
+     * @param state The initial state.
+     * @param playerId The ID of the player making the move.
+     * @param target The chosen square.
+     * @return The generated move.
+     */
     public static BoardState generateMove(BoardState state, int playerId, SquarePosition target) {
         Square targetSquare = state.getBoard().getSquare(target);
-        if (!playerCanTargetSquare(playerId, targetSquare)) {
+        if (!canPlayerTargetSquare(playerId, targetSquare)) {
             return null;
         }
         boolean allPlayersMoved = state.allPlayersMoved();
         return createNextBoardState(state, target, playerId, allPlayersMoved);
     }
 
+    /**
+     * Generates a detailed move of a player.
+     * @param state The initial state.
+     * @param playerId The ID of the player making the move.
+     * @param target The chosen square.
+     * @return The generated detailed move.
+     */
     public static DetailedMove generateDetailedMove(BoardState state, int playerId, SquarePosition target) {
         Square targetSquare = state.getBoard().getSquare(target);
-        if (!playerCanTargetSquare(playerId, targetSquare)) {
+        if (!canPlayerTargetSquare(playerId, targetSquare)) {
             return null;
         }
         List<DetailedMovePhase> phases = new ArrayList<>();
@@ -57,6 +80,11 @@ public class MoveGenerator {
         return new DetailedMove(playerId, phases);
     }
 
+    /**
+     * Finds all explosions on the board.
+     * @param board The board.
+     * @return A list of all found explosions.
+     */
     private static List<SquarePosition> findExplosions(Board board) {
         List<SquarePosition> explosions = new ArrayList<>();
         for (int i = 0; i < board.getSize(); i++) {
@@ -72,6 +100,13 @@ public class MoveGenerator {
         return explosions;
     }
 
+    /**
+     * Perform the first phase of a detailed move.
+     * @param board The board.
+     * @param playerId The ID of the player making the move.
+     * @param target The chosen square.
+     * @return The first phase of a detailed move.
+     */
     private static DetailedMovePhase performFirstPhase(Board board, int playerId, SquarePosition target) {
         List<SquarePosition> explosions = new ArrayList<>();
         List<SquarePosition> targets = new ArrayList<>();
@@ -82,6 +117,14 @@ public class MoveGenerator {
         return new DetailedMovePhase(explosions, targets, board.copy());
     }
 
+    /**
+     * Perform a phase of a detailed move.
+     * @param board The board.
+     * @param playerId The ID of the player making the move.
+     * @param playerElectronCounts The electron counts of players.
+     * @param explosions The list where new explosions will be added.
+     * @return The phase of the detailed move.
+     */
     private static DetailedMovePhase performPhase(
             Board board,
             int playerId,
@@ -113,18 +156,30 @@ public class MoveGenerator {
         return new DetailedMovePhase(explosions, targets, board.copy());
     }
 
-    private static boolean playerCanTargetSquare(int playerId, Square targetSquare) {
+    /**
+     * Checks whether a player can add an electron to the given square.
+     * @param playerId The ID of the player.
+     * @param targetSquare The targeted square.
+     * @return True if the player can add an electron to the square, otherwise false.
+     */
+    private static boolean canPlayerTargetSquare(int playerId, Square targetSquare) {
         int squarePlayerId = targetSquare.playerId();
         return squarePlayerId == Board.NO_PLAYER_ID || squarePlayerId == playerId;
     }
 
+    /**
+     * Generates all possible squares where a player can add an electron.
+     * @param board The board.
+     * @param playerId The ID of the player.
+     * @return A list of all positions where the player can add an elcetron.
+     */
     private static List<SquarePosition> generateAllMoveTargets(Board board, int playerId) {
         List<SquarePosition> origins = new ArrayList<>();
         for (int i = 0; i < board.getSize(); i++) {
             for (int j = 0; j < board.getSize(); j++) {
                 Square square = board.getSquare(i, j);
                 // TODO: add position only if there is an owned square in close proximity (e.g. max 2 squares away)
-                if (playerCanTargetSquare(playerId, square)) {
+                if (canPlayerTargetSquare(playerId, square)) {
                     origins.add(new SquarePosition(i, j));
                 }
             }
@@ -132,13 +187,21 @@ public class MoveGenerator {
         return origins;
     }
 
+    /**
+     * Creates the next board state
+     * @param state
+     * @param target
+     * @param playerId
+     * @param allPlayersMoved
+     * @return
+     */
     private static BoardState createNextBoardState(
             BoardState state,
             SquarePosition target,
             int playerId,
             boolean allPlayersMoved) {
         int[] playerElectronCounts = state.getAllElectronCounts().clone();
-        playerElectronCounts[playerId]++; // TODO: What if this is raised again in while cycle
+        playerElectronCounts[playerId]++;
         Board board = state.getBoard().copy();
         Queue<SquarePosition> targets = new LinkedList<>();
         targets.add(target);
@@ -171,6 +234,13 @@ public class MoveGenerator {
         return new BoardState(board, target, playerElectronCounts);
     }
 
+    /**
+     * Checks if a player stole all electrons from other players.
+     * @param playerId The ID of the player.
+     * @param playerElectronCounts The electron counts of all players.
+     * @param allPlayersMoved An indicator whether all players have made a move.
+     * @return True if the player stole all electrons from other players, otherwise false.
+     */
     private static boolean playerStoleAllElectrons(int playerId, int[] playerElectronCounts, boolean allPlayersMoved) {
         if (!allPlayersMoved) {
             return false;
@@ -183,6 +253,12 @@ public class MoveGenerator {
         return true;
     }
 
+    /**
+     * Gets target positions of an explosion.
+     * @param board The board.
+     * @param position The position of the explosion.
+     * @return The target positions of an explosion.
+     */
     private static List<SquarePosition> getExplosionTargets(Board board, SquarePosition position) {
         List<SquarePosition> explosionTargets = new ArrayList<>();
         int prevRow = position.row() - 1;
