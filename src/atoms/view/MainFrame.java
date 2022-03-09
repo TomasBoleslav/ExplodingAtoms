@@ -1,52 +1,5 @@
 package atoms.view;
 
-// How to represent board.
-// Board - size (width, height), 2D array of squares
-// Square - number of atoms, playerID
-
-// How to represent player - Human, AI
-// - id (more than 2 players possible)
-// HumanPlayer - nothing else
-// AIPlayer - int (enum) difficulty
-
-// Player class may not be required - just an array of IDs
-// - statistics can be gathered from board (scanning squares with corresponding ID)
-// - list of players managed by Controller or Model?
-
-// model = new Model();
-// model.newGame()
-
-// List of players managed by controller:
-// - Model.performHumanMove(int playerID, Position position) -> VerboseMove (ModelMove is internal)
-// - Model.performAIMove(int playerID) -> VerboseMove
-// -
-
-// List of players managed by Model:
-// - Model.getCurrentPlayer() -> Player
-// - Model.setNextHumanMove(Position position)
-// - Model.getMove()
-
-// How to represent a move
-// ModelMove - just outcome (not stages)
-// - must contain enough information to reverse the move
-// generateMoves(Board) -> List<ModelMove>
-// ModelMove: Board outcomeBoard, // all squares of outcome board would have to be allocated
-// or
-// ModelMove: List<Change>, where Change=List<(Position position, Square before, Square after)>
-//
-
-// VerboseMove - separated into stages, how should a stage be represented?
-// MoveStage/MovePhase - initialState
-// - View must be as simple as possible - just shows stage
-// - moves are sorted in queue in groups of moves (explosions) that happen at the same time
-// - Explosion: Position from, Position[] targets (positions of electrons, can be used for animations)
-// - SingleMove/MovePhase: List<Explosion>, Board boardAfter // Visually: All explosion positions will have red background
-//   and 4 electrons, then the board will be reset with boardAfter, then in the next phase other positions will become red, ...
-//   or you can also mark target positions with e.g. yellow color
-// - VerboseMove: int playerID, List<SingleMove>
-
-// TODO BUG: game does not wait between Human player move and AI player move
-
 import atoms.model.*;
 
 import javax.swing.*;
@@ -56,7 +9,14 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.util.List;
 
+/**
+ * Main frame of the application.
+ */
 public final class MainFrame extends JFrame {
+
+    /**
+     * Creates the main frame.
+     */
     public MainFrame() {
         setTitle("Exploding Atoms");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -75,6 +35,28 @@ public final class MainFrame extends JFrame {
         setVisible(true);
     }
 
+    private static final String MENU_PANEL_NAME = "menuPanel";
+    private static final String GAME_PANEL_NAME = "gamePanel";
+    private static final String HUMAN_PLAYER = "Human";
+    private static final String AI_PLAYER = "Computer";
+    private static final Font fontNormal = new Font("Courier New", Font.PLAIN, 14);
+    private static final Font fontHeading = new Font("Courier New", Font.BOLD, 32);
+    private static final Dimension preferredFrameSize = new Dimension(640, 480);
+    private static final EmptyBorder border = new EmptyBorder(10, 10, 10, 10);
+    private JPanel contentPanel;
+    private CardLayout cardLayout;
+    private JPanel menuPanel;
+    private JPanel gamePanel;
+    private JLabel currentPlayerLabel;
+    private JLabel winnerLabel;
+    private BoardPanel boardPanel;
+    private GameModel gameModel;
+    private boolean[] isAIPlayer;
+
+    /**
+     * Creates a panel with the main menu.
+     * @return A panel with the main menu.
+     */
     private JPanel createMenuPanel() {
         JPanel menuPanel = new JPanel(new GridLayout(3, 1));
         menuPanel.setBorder(border);
@@ -102,6 +84,11 @@ public final class MainFrame extends JFrame {
         return menuPanel;
     }
 
+    /**
+     * Creates a panel with player settings.
+     * @param playerId The ID of the player.
+     * @return A panel with player settings.
+     */
     private JPanel createPlayerSettingsPanel(int playerId) {
         JPanel playerSettings = new JPanel(new FlowLayout());
         JLabel label = new JLabel("Player " + (playerId + 1) + ":");
@@ -121,6 +108,10 @@ public final class MainFrame extends JFrame {
         return playerSettings;
     }
 
+    /**
+     * Creates a panel with the game.
+     * @return A panel with the game.
+     */
     private JPanel createGamePanel() {
         //JPanel gamePanel = new JPanel(new GridLayout(1, 2));
         JPanel gamePanel = new JPanel(new BorderLayout());
@@ -136,6 +127,10 @@ public final class MainFrame extends JFrame {
         return gamePanel;
     }
 
+    /**
+     * Creates a board panel.
+     * @return A board panel.
+     */
     private JPanel createBoardPanel() {
         boardPanel = new BoardPanel();
         boardPanel.addMouseListener(new MouseListener() {
@@ -163,6 +158,9 @@ public final class MainFrame extends JFrame {
         return boardPanel;
     }
 
+    /**
+     * Updates status of the game.
+     */
     private void updateGameStatus() {
         if (gameModel.isGameOver()) {
             int winnerNumber = playerNumberFromId(gameModel.getWinnerId());
@@ -173,29 +171,20 @@ public final class MainFrame extends JFrame {
         }
     }
 
+    /**
+     * Gets the number of a player from their ID.
+     * @param playerId The ID of the player.
+     * @return The number of a player from their ID.
+     */
     private int playerNumberFromId(int playerId) {
         return playerId + 1;
     }
 
-    // TODO: problem - application is frozen when displaying move
-    // Solution: display phases separately, always use invokeLater
-    // Complications:
-    // - requires use of boolean control variable isDisplayingMove, which will prevent click events on board
-    // - problem if player changes scenes fast - if move is still being displayed
-    //   - old invokes must be detected (using counter variable as gameModel ID?) - inside invokes - and thrown away
-    //     if (gameModelId == myMovePhaseId) { performMovePhase; invokeLater(this function); }
-    // Generalization - RunnableSequence - sequence of jobs to run after each other in sequence with given delay
-    // - internally - create list of lambdas (or Runnable-s), each lambda will perform a job and call next lambda with
-    //   invokeLater
-    // OR JUST YIELD THE THREAD - will it work? does not work
-    // - maybe make a while cycle where sleeping will be done with while loop and yielding until time is up
-
-    // Create ActionListener-s in a loop (store them in list)
-    // Loop through ActionListener-s, create timers - put there another action listener that starts the next timer
-    // new Timer(delay, actionListener for drawing, actionListener for starting nextTimer)
-    // maybe iterate in reverse through phases and create Timer-s from last to first, so that they are known?
-
-
+    /**
+     * Animates a move on the board.
+     * @param move The move to animate.
+     * @param markFirstPhase An indicator whether the first phase should be marked.
+     */
     private void animateMove(DetailedMove move, boolean markFirstPhase) {
         final int DELAY_BETWEEN_MOVES = 300;
         for (int i = 0; i < move.phases().size(); i++) {
@@ -217,12 +206,21 @@ public final class MainFrame extends JFrame {
         }
     }
 
+    /**
+     * Draws explosions and their targets.
+     * @param explosions Explosions to draw.
+     * @param targets Targets of explosions to draw.
+     */
     private void drawExplosionsAndTargets(List<SquarePosition> explosions, List<SquarePosition> targets) {
         boardPanel.setExplosions(explosions);
         boardPanel.setTargets(targets);
         boardPanel.paintImmediately(0, 0, boardPanel.getWidth(), boardPanel.getHeight());
     }
 
+    /**
+     * Draws a board.
+     * @param board The board to draw.
+     */
     private void drawBoard(Board board) {
         boardPanel.setExplosions(null);
         boardPanel.setTargets(null);
@@ -230,6 +228,10 @@ public final class MainFrame extends JFrame {
         boardPanel.paintImmediately(0, 0, boardPanel.getWidth(), boardPanel.getHeight());
     }
 
+    /**
+     * Makes the current thread sleep for a certain amount of time.
+     * @param milliseconds The number of milliseconds the thread should sleep.
+     */
     private void sleep(int milliseconds) {
         try {
             Thread.sleep(milliseconds);
@@ -237,6 +239,10 @@ public final class MainFrame extends JFrame {
         }
     }
 
+    /**
+     * Creates a game control panel.
+     * @return A game control panel.
+     */
     private JPanel createGameControlPanel() {
         JPanel gameControlPanel = new JPanel(new GridLayout(2, 1));
         gameControlPanel.setBorder(border);
@@ -261,7 +267,10 @@ public final class MainFrame extends JFrame {
         return gameControlPanel;
     }
 
-    public void playGame() {
+    /**
+     * Starts a game.
+     */
+    private void playGame() {
         gameModel = new GameModel();
         Board board = gameModel.getCurrentBoardCopy();
         drawBoard(board);
@@ -272,17 +281,29 @@ public final class MainFrame extends JFrame {
         }
     }
 
+    /**
+     * Performs a move as a human player.
+     * @param target The target square where to add an electron.
+     */
     private void moveAsHumanPlayer(SquarePosition target) {
         DetailedMove move = gameModel.performMove(target);
         performMove(move, false);
     }
 
+    /**
+     * Performs a move as an AI player.
+     */
     private void moveAsAIPlayer() {
         DetailedMove move = gameModel.performAIMove();
         sleep(300);
         performMove(move, true);
     }
 
+    /**
+     * Performs the given move.
+     * @param move The move to perform.
+     * @param markFirstPhase An indicator whether the first phase should be marked.
+     */
     private void performMove(DetailedMove move, boolean markFirstPhase) {
         animateMove(move, markFirstPhase);
         updateGameStatus();
@@ -291,31 +312,18 @@ public final class MainFrame extends JFrame {
         }
     }
 
+    /**
+     * Checks if the current player is an AI player.
+     * @return True if the current player is an AI player, otherwise false.
+     */
     private boolean isCurrentPlayerAI() {
         return isAIPlayer[gameModel.getCurrentPlayerId()];
     }
 
-    public void quitGame() {
+    /**
+     * Quits the current game.
+     */
+    private void quitGame() {
         cardLayout.show(contentPanel, MENU_PANEL_NAME);
     }
-
-    private static final String MENU_PANEL_NAME = "menuPanel";
-    private static final String GAME_PANEL_NAME = "gamePanel";
-    private static final String HUMAN_PLAYER = "Human";
-    private static final String AI_PLAYER = "Computer";
-    private static final Font fontNormal = new Font("Courier New", Font.PLAIN, 14);
-    private static final Font fontHeading = new Font("Courier New", Font.BOLD, 32);
-    private static final Dimension preferredFrameSize = new Dimension(640, 480);
-    private static final EmptyBorder border = new EmptyBorder(10, 10, 10, 10);
-    private JPanel contentPanel;
-    private CardLayout cardLayout;
-    private JPanel menuPanel;
-    private JPanel gamePanel;
-    private JLabel currentPlayerLabel;
-    private JLabel winnerLabel;
-    private BoardPanel boardPanel;
-    private GameModel gameModel;
-    private boolean[] isAIPlayer;
-
-    // TODO: if immediate repainting is a problem, how to paint steps?
 }
