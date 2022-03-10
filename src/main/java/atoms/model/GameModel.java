@@ -13,12 +13,6 @@ public final class GameModel {
     public static final int PLAYERS_COUNT = 2;
     public static final int BOARD_SIZE = 8;
 
-    private static final int MINIMAX_DEPTH = 3;
-    private static final Random random = new Random(0);
-    private int winnerId;
-    private BoardState currentBoardState;
-    private int currentPlayerId;
-
     /**
      * Creates a new game model.
      */
@@ -94,6 +88,14 @@ public final class GameModel {
     public Board getCurrentBoardCopy() {
         return currentBoardState.getBoard().deepCopy();
     }
+
+    private static final int MINIMAX_DEPTH = 2;
+    private static final int RANDOM_SEED = 0;
+
+    private final Random random = new Random(RANDOM_SEED);
+    private int winnerId;
+    private BoardState currentBoardState;
+    private int currentPlayerId;
 
     /**
      * Switches the current state to another one.
