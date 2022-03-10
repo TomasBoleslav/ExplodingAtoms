@@ -24,10 +24,6 @@ Dokumentace kódu může být vygenerována pomocí nástroje *javadoc*:
 
 TODO
 
-## Důkazy
-
-Některé zvolené postupy vyžadovaly matematické důkazy o průběhu hry.
-
 ### Zacyklení explozí
 
 Ve hře dochází k řetězení explozí, které nemusí nikdy skončit. Můžeme si například představit šachovnici, která je plně obsazena elektrony obou hráčů, a následující hráč položí další elektron. Tím začne posloupnost explozí, která nikdy neskončí, protože počet elektronů se nikdy nesnižuje a jeden přebývá.
@@ -37,31 +33,6 @@ V původních pravidlech by se měl takový nekonečný cyklus detekovat a vyhl�
 **Tvrzení**: Pokud hráč svým tahem způsobí nekonečné řetězení explozí, pak musí tímto tahem zabrat všechna políčka druhého hráče.
 
 **Důkaz (náznak)**: Na šachovnici je pouze konečný počet políček, na kterých k explozím dochází. Protože je explozí nekonečně mnoho, tak políčka, která explodují, zaberou své sousedy a donekonečna je zásobují elektrony. Z toho důvodu se i tito sousedé musí jednou zaplnit a budou nekonečněkrát explodovat. Indukcí se tímto způsobem dostanou exploze na všechna políčka, tedy druhý hráč o přišel o všechny své elektrony.
-
-
-
-TODO: může se do fronty explozí dostat to samé políčko dvakrát? vadí to?
-- možná druhý důkaz zaručuje, že se toto nestane?
-
-
-// Mathematical proofs:
-// 1. If there is endless loop of explosions, the player who caused it will take over all enemy electrons
-// Proof:
-//   By contradiction. Let's assume player causes an endless loop and an enemy square will be left untouched.
-//   Let's take the boundary inside which the explosion of the loop happen and outside not. The number of squares
-//   neighboring the boundary is finite. Every time explosion happens inside the boundary, an electron will be sent
-//   outside. Thus squares neighboring the boundary have an endless supply of electrons, so they must explode too at
-//   one point. Hence, we have the contradiction with the fact that atoms outside the boundary do not explode.
-// Consequence: We can stop the game when all squares belong to 1 player
-//
-// 2. Two neighboring atoms cannot explode at the same time
-// Proof:
-//   Explosions happen in waves and are initiated with 1 explosion, when we put 1 electron to the board.
-//   Let's say we put this electron to white square. Then in the next wave, the explosions can be initiated only from
-//   black squares. In the following wave, the explosions can be initiated only from the white squares, etc.
-//   Thus, each wave of explosions is initiated only from white squares or only from black squares.
-//   2 neighbors cannot explode in the same wave, because they have different square colors.
-
 
 ## Reference
 
