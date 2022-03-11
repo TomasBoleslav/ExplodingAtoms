@@ -12,7 +12,15 @@ Hra se hraje na normální šachovnici. Na každém políčku je jedno atomové 
 
 K překladu zdrojového kódu je zapotřebí mít k dispozici Javu verze alespoň 17. Program se snadno přeloží pomocí nástroje *Maven*:
 
-TODO
+```shell
+$ mvn package
+```
+
+Spuštění programu:
+
+```shell
+$ java -jar target/atoms-1.0.jar
+```
 
 ## Ovládání hry
 
