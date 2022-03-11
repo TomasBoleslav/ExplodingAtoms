@@ -28,9 +28,17 @@ Po spuštění programu se zobrazí okno aplikace s hlavním menu. V něm může
 
 ## Vývojová dokumentace
 
-Dokumentace kódu může být vygenerována pomocí nástroje *javadoc*:
+Většina informací o jednotlivých částech programu je obsažena v komentářích kódu a ve vygenerované dokumentaci.
 
-TODO
+### Generování dokumentace
+
+Dokumentace kódu může být vygenerována pomocí nástroje *Maven* a jeho pluginu pro *javadoc*:
+
+```shell
+$ mvn javadoc:javadoc
+```
+
+Hlavní stránka dokumentace pak bude umístěna na cestě `target/site/apidocs/index.html`.
 
 ### Zacyklení explozí
 
@@ -40,7 +48,7 @@ V původních pravidlech by se měl takový nekonečný cyklus detekovat a vyhl�
 
 **Tvrzení**: Pokud hráč svým tahem způsobí nekonečné řetězení explozí, pak musí tímto tahem zabrat všechna políčka druhého hráče.
 
-**Důkaz (náznak)**: Na šachovnici je pouze konečný počet políček, na kterých k explozím dochází. Protože je explozí nekonečně mnoho, tak políčka, která explodují, zaberou své sousedy a donekonečna je zásobují elektrony. Z toho důvodu se i tito sousedé musí jednou zaplnit a budou nekonečněkrát explodovat. Indukcí se tímto způsobem dostanou exploze na všechna políčka, tedy druhý hráč o přišel o všechny své elektrony.
+**Důkaz (náznak)**: Na šachovnici je pouze konečný počet políček, na kterých k explozím dochází. Protože je explozí nekonečně mnoho, tak políčka, která explodují, zaberou své sousedy a donekonečna je zásobují elektrony. Z toho důvodu se i tito sousedé musí jednou zaplnit a budou nekonečněkrát explodovat. Indukcí se tímto způsobem dostanou exploze na všechna políčka, tedy druhý hráč o přijde o všechny své elektrony.
 
 ## Reference
 
