@@ -50,9 +50,9 @@ public final class MainFrame extends JFrame {
     private JPanel menuPanel;
     private JPanel gamePanel;
     private JLabel currentPlayerLabel;
-    private JLabel winnerLabel;
     private BoardPanel boardPanel;
     private GameModel gameModel;
+    private JLabel[] electronCountLabels;
     private boolean[] isAIPlayer;
 
     /**
@@ -166,6 +166,12 @@ public final class MainFrame extends JFrame {
             int currentPlayerNumber = playerNumberFromId(gameModel.getCurrentPlayerId());
             currentPlayerLabel.setText("Player " + currentPlayerNumber + " on the move");
         }
+        BoardState currentState = gameModel.getCurrentState();
+        for (int i = 0; i < GameModel.PLAYERS_COUNT; i++) {
+            int playerNumber = playerNumberFromId(i);
+            int electronsCount = currentState.getElectronsCount(i);
+            electronCountLabels[i].setText("Player " + playerNumber + ": " + electronsCount);
+        }
     }
 
     /**
@@ -243,15 +249,18 @@ public final class MainFrame extends JFrame {
         JPanel gameControlPanel = new JPanel(new GridLayout(2, 1));
         gameControlPanel.setBorder(border);
 
-        JPanel statusPanel = new JPanel(new GridLayout(3, 1));
+        JPanel statusPanel = new JPanel(new GridLayout(4, 1));
         JLabel statusHeading = new JLabel("Status");
         statusHeading.setFont(fontHeading);
-        currentPlayerLabel = new JLabel("Player 1 on the move");
-        winnerLabel = new JLabel("Player 1 has won!");
-        winnerLabel.setVisible(false);
+        currentPlayerLabel = new JLabel();
+        electronCountLabels = new JLabel[GameModel.PLAYERS_COUNT];
         statusPanel.add(statusHeading);
         statusPanel.add(currentPlayerLabel);
-        statusPanel.add(winnerLabel);
+        for (int i = 0; i < GameModel.PLAYERS_COUNT; i++) {
+            JLabel electronCountLabel = new JLabel();
+            electronCountLabels[i] = electronCountLabel;
+            statusPanel.add(electronCountLabel);
+        }
 
         JPanel buttonsPanel = new JPanel();
         JButton quitButton = new JButton("Quit");
@@ -268,7 +277,7 @@ public final class MainFrame extends JFrame {
      */
     private void playGame() {
         gameModel = new GameModel();
-        Board board = gameModel.getCurrentBoardCopy();
+        Board board = gameModel.getCurrentState().getBoard();;
         drawBoard(board);
         updateGameStatus();
         cardLayout.show(contentPanel, GAME_PANEL_NAME);

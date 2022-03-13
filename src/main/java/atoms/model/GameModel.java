@@ -82,11 +82,11 @@ public final class GameModel {
     }
 
     /**
-     * Gets copy of the current board.
-     * @return The copy of the current board.
+     * Gets the current state.
+     * @return The current state.
      */
-    public Board getCurrentBoardCopy() {
-        return currentBoardState.getBoard().deepCopy();
+    public BoardState getCurrentState() {
+        return currentBoardState;
     }
 
     private static final int MINIMAX_DEPTH = 2;
